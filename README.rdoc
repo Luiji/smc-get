@@ -1,0 +1,69 @@
+= SMC-GET -- level repository manager for Secret Maryo Chronicles
+smc-get - Library and command-line for managing SMC level packages.
+
+= Synopsis
+ require 'smc-get'
+ smcget = SmcGet.new
+ smcget.install 'mypackage'
+ smcget.uninstall 'mypackage'
+
+= Description
+smc-get is a library and command-line tool for installing, uninstalling, etc.
+level packages from the Secret Maryo Chronicles Contributed Levels Repository.
+
+== Prototype Notice
+
+This program is a prototype for functionality that will eventually be merged
+with Secret Maryo Chronicles. It is subject to change and should not be used
+for anything other then testing.
+
+= Usage
+
+== Using it as a command-line
+smc-get's main purpose is to be used as a command-line utility.  It should be
+executed in the syntax:
+ smc-get COMMAND [PARAMETERS...]
+Where COMMAND is the command and PARAMATERS... are the parameters for that
+command.
+
+To get help on the various commands, use the help command.
+ smc-get help
+
+== Using it as a library
+smc-get, although mainly targetted at being a command-line utility, may also be
+used as a library.  This is useful when, for instance, creating a GUI front-end.
+
+To initialize the library, create an instance of the SmcGet type.
+ smcget = SmcGet.new
+
+It will automatically load the smc-get.yml configuration file.  To change what
+configuration file it should load, specify it when initializing.
+ smcget = SmcGet.new('config.yml')
+
+Then just use its commands in a similar way to how you would if it were a
+command-line.
+ smcget.install 'mypackage'
+
+If the function fails, it will raise various exceptions.  When creating a GUI,
+you should catch these exceptions and present them as message boxes.
+begin
+   smcget.install 'mypackage'
+ rescue SmcGet::NoSuchPackageError
+   alert 'No such package "mypackage"!'
+ end
+
+= License
+
+smc-get is licensed under the GNU General Public License. For more information,
+see COPYING.
+
+= Website
+
+This software was written by Entertaining Software, Inc. Visit us at
+<http://www.entertainingsoftware.com/>.
+
+This software is hosted at GitHub. The project page can be found at
+<http://github.com/Luiji/smc-get>.
+
+This software was written for Secret Maryo Chronicles. Visit them at
+<http://www.secretmaryo.org/>.
