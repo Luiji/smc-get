@@ -22,34 +22,38 @@ require 'net/https'
 
 # The SmcGet class provides a set of functions for managing smc-get packages.
 class SmcGet
-  public
+  
+  class SmcGetError < StandardError
+  end
   
   # Raised when the class is initialized with a non-existant settings file.
-  class CannotFindSettings < Exception
+  class CannotFindSettings < SmcGetError
     # The path to the settings file that was specified.
     attr_reader :settings_path
     
     # Create a new instance of the exception with the settings path.
     def initialize(settings_path)
+      super()
       @settings_path = settings_path
     end
   end
   
   # Raised when a package call is made but the specified package cannot be
   # found.
-  class NoSuchPackageError < Exception
+  class NoSuchPackageError < SmcGetError
     # The name of the package that could not be found.
     attr_reader :package_name
     
     # Create a new instance of the exception with the specified package name.
     def initialize(name)
+      super()
       @package_name = name
     end
   end
   
   # Raised when a package call is made but one of the resources of the
   # specified package is missing.
-  class NoSuchResourceError < Exception
+  class NoSuchResourceError < SmcGetError
     # The type of resource (should be either :music, :graphic, or :level).
     attr_reader :resource_type
     # The name of the resource (i.e. mylevel.lvl or Stuff/Cheeseburger.png).
@@ -58,6 +62,7 @@ class SmcGet
     # Create a new instance of the exception with the specified resource type
     # and name.  Type should either be :music, :graphic, or :level.
     def initialize(type, name)
+      super()
       @resource_type = type
       @resource_name = name
     end
@@ -75,6 +80,17 @@ class SmcGet
     # Returns true if the resource type is :level.  False otherwise.
     def is_level
       @resource_type == :level
+    end
+  end
+  
+  # Raised when a call to download() fails.
+  class DownloadFailedError < SmcGetError
+    # The URL that failed to download (including everything after /raw/master
+    # only).
+    attr_reader :download_url
+    
+    def initialize(url)
+      @download_url = url
     end
   end
   
@@ -159,19 +175,6 @@ class SmcGet
       yaml = YAML.load_file(tmp.path)
     end
     return yaml
-  end
-  
-  private
-  
-  # Raised when a call to download() fails.
-  class DownloadFailedError < Exception
-    # The URL that failed to download (including everything after /raw/master
-    # only).
-    attr_reader :download_url
-    
-    def initialize(url)
-      @download_url = url
-    end
   end
   
   # Download the specified raw file from the repository to the specified
