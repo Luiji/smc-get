@@ -68,17 +68,17 @@ class SmcGet
     end
     
     # Returns true if the resource type is :music.  False otherwise.
-    def is_music
+    def is_music?
       @resource_type == :music
     end
     
     # Returns true if the resource type is :graphic.  False otherwise.
-    def is_graphic
+    def is_graphic?
       @resource_type == :graphic
     end
     
     # Returns true if the resource type is :level.  False otherwise.
-    def is_level
+    def is_level?
       @resource_type == :level
     end
   end
