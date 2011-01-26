@@ -187,6 +187,8 @@ class SmcGet
     # output file.  URL should be everything in the URL after
     # https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/.
     def download(url, output)
+      # Make url friendly.
+      url = url.gsub(/ /, '%20')
       # Create directories if needed.
       dirs = File.dirname(output).split('/')
       dirs.count.times do |i|
