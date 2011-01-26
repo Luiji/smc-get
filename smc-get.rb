@@ -134,7 +134,7 @@ class SmcGet
 
       pkgdata['music'].each do |filename|
 	begin
-	  File.delete("#{@datadir}/sounds/contrib-sounds/#{File.basename(filename)}")
+	  File.delete("#{@datadir}/music/contrib-music/#{File.basename(filename)}")
 	rescue Errno::ENOENT
 	end
       end if pkgdata.has_key?('music')
