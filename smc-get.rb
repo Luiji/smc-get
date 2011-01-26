@@ -217,6 +217,7 @@ if __FILE__ == $0
 	puts '  install    install a package'
 	puts '  uninstall  uninstall a package'
 	puts '  getinfo    get information about a package'
+	puts '  help       print this help message'
 	puts
 	puts 'Report bugs to: luiji@users.sourceforge.net'
 	puts 'smc-get home page: <http://www.secretmaryo.org/>'
