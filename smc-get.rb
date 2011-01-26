@@ -187,6 +187,15 @@ class SmcGet
     # output file.  URL should be everything in the URL after
     # https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/.
     def download(url, output)
+      # Create directories if needed.
+      dirs = File.dirname(output).split('/')
+      dirs.count.times do |i|
+	dirp = File.join(dirs[0..i])
+	if not File.directory?(dirp) then
+	  Dir.mkdir(dirp)
+	end
+      end
+      # Download file.
       File.open(output, "w") do |outputfile|
 	uri = URI.parse("https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/#{url}")
 	request = Net::HTTP.new(uri.host, uri.port)
