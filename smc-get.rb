@@ -133,15 +133,24 @@ class SmcGet
       end
 
       pkgdata['music'].each do |filename|
-	File.delete("#{@datadir}/sounds/contrib-sounds/#{File.basename(filename)}")
+	begin
+	  File.delete("#{@datadir}/sounds/contrib-sounds/#{File.basename(filename)}")
+	rescue Errno::ENOENT
+	end
       end if pkgdata.has_key?('music')
 
       pkgdata['graphics'].each do |filename|
-	File.delete("#{@datadir}/pixmaps/contrib-graphics/#{File.basename(filename)}")
+	begin
+	  File.delete("#{@datadir}/pixmaps/contrib-graphics/#{File.basename(filename)}")
+	rescue Errno::ENOENT
+	end
       end if pkgdata.has_key?('graphics')
 
       pkgdata['levels'].each do |filename|
-	File.delete("#{@datadir}/levels/#{File.basename(filename)}")
+	begin
+	  File.delete("#{@datadir}/levels/#{File.basename(filename)}")
+	rescue Errno::ENOENT
+	end
       end if pkgdata.has_key?('levels')
 
       File.delete("#{@datadir}/packages/#{package_name}.yml")
@@ -245,6 +254,8 @@ if __FILE__ == $0
   rescue SmcGet::NoSuchResourceError => error
     puts "No such #{error.resource_type} resource #{error.resource_name}."
     puts "Package #{ARGV[1]} has broken dependencies."
+    puts "Uninstalling previously installed files for #{ARGV[1]}..."
+    smcget.uninstall(ARGV[1])
   end
 end
 
