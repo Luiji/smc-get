@@ -101,7 +101,7 @@ class SmcGet
 
       pkgdata['music'].each do |filename|
 	begin
-	  download("music/#{File.basename(filename)}", "#{@datadir}/music/contrib-music/#{File.basename(filename)}")
+	  download("music/#{filename}", "#{@datadir}/music/contrib-music/#{filename}")
 	rescue DownloadFailedError => error
 	  raise NoSuchResourceError.new(:music, error.download_url)
 	end
@@ -109,7 +109,7 @@ class SmcGet
 
       pkgdata['graphics'].each do |filename|
 	begin
-	  download("graphics/#{File.basename(filename)}", "#{@datadir}/pixmaps/contrib-graphics/#{File.basename(filename)}")
+	  download("graphics/#{filename}", "#{@datadir}/pixmaps/contrib-graphics/#{filename}")
 	rescue DownloadFailedError => error
 	  raise NoSuchResourceError.new(:graphic, error.download_url)
 	end
@@ -117,7 +117,7 @@ class SmcGet
 
       pkgdata['levels'].each do |filename|
 	begin
-	  download("levels/#{File.basename(filename)}", "#{@datadir}/levels/#{File.basename(filename)}")
+	  download("levels/#{filename}", "#{@datadir}/levels/#{filename}")
 	rescue DownloadFailedError => error
 	  raise NoSuchResourceError.new(:level, error.download_url)
 	end
@@ -134,21 +134,21 @@ class SmcGet
 
       pkgdata['music'].each do |filename|
 	begin
-	  File.delete("#{@datadir}/music/contrib-music/#{File.basename(filename)}")
+	  File.delete("#{@datadir}/music/contrib-music/#{filename}")
 	rescue Errno::ENOENT
 	end
       end if pkgdata.has_key?('music')
 
       pkgdata['graphics'].each do |filename|
 	begin
-	  File.delete("#{@datadir}/pixmaps/contrib-graphics/#{File.basename(filename)}")
+	  File.delete("#{@datadir}/pixmaps/contrib-graphics/#{filename}")
 	rescue Errno::ENOENT
 	end
       end if pkgdata.has_key?('graphics')
 
       pkgdata['levels'].each do |filename|
 	begin
-	  File.delete("#{@datadir}/levels/#{File.basename(filename)}")
+	  File.delete("#{@datadir}/levels/#{filename}")
 	rescue Errno::ENOENT
 	end
       end if pkgdata.has_key?('levels')
