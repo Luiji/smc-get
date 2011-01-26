@@ -84,7 +84,7 @@ class SmcGet
       begin
 	settings = YAML.load_file(config_file)
       rescue Errno::ENOENT
-	raise CannotFindSettings, config_file
+	raise CannotFindSettings.new(config_file)
       end
       @datadir = settings['data-directory']
     end
@@ -94,16 +94,16 @@ class SmcGet
       begin
 	download("packages/#{package_name}.yml", "#{@datadir}/packages/#{package_name}.yml")
       rescue DownloadFailedError
-	raise NoSuchPackageError, package_name
+	raise NoSuchPackageError.new(package_name)
       end
 
       pkgdata = YAML.load_file("#{@datadir}/packages/#{package_name}.yml")
 
       pkgdata['music'].each do |filename|
 	begin
-	  download("music/#{File.basename(filename)}", "#{@datadir}/sounds/contrib-sounds/#{File.basename(filename)}")
+	  download("music/#{File.basename(filename)}", "#{@datadir}/music/contrib-music/#{File.basename(filename)}")
 	rescue DownloadFailedError => error
-	  raise NoSuchResourceError, :music, error.download_url
+	  raise NoSuchResourceError.new(:music, error.download_url)
 	end
       end if pkgdata.has_key?('music')
 
@@ -111,7 +111,7 @@ class SmcGet
 	begin
 	  download("graphics/#{File.basename(filename)}", "#{@datadir}/pixmaps/contrib-graphics/#{File.basename(filename)}")
 	rescue DownloadFailedError => error
-	  raise NoSuchResourceError, :graphic, error.download_url
+	  raise NoSuchResourceError.new(:graphic, error.download_url)
 	end
       end if pkgdata.has_key?('graphics')
 
@@ -119,7 +119,7 @@ class SmcGet
 	begin
 	  download("levels/#{File.basename(filename)}", "#{@datadir}/levels/#{File.basename(filename)}")
 	rescue DownloadFailedError => error
-	  raise NoSuchResourceError, :level, error.download_url
+	  raise NoSuchResourceError.new(:level, error.download_url)
 	end
       end if pkgdata.has_key?('levels')
     end
@@ -129,7 +129,7 @@ class SmcGet
       begin
 	pkgdata = YAML.load_file("#{@datadir}/packages/#{package_name}.yml")
       rescue Errno::ENOENT
-	raise NoSuchPackageError, package_name
+	raise NoSuchPackageError.new(package_name)
       end
 
       pkgdata['music'].each do |filename|
@@ -154,7 +154,7 @@ class SmcGet
 	begin
 	  download("packages/#{package_name}.yml", tmp.path)
 	rescue DownloadFailedError
-	  raise NoSuchPackageError, package_name
+	  raise NoSuchPackageError.new(package_name)
 	end
 	yaml = YAML.load_file(tmp.path)
       end
@@ -184,7 +184,7 @@ class SmcGet
 	request.use_ssl = true
 	request.start do
 	  request.request_get(uri.path) do |response|
-	    if response.code != "200" then raise DownloadFailedError, url end
+	    if response.code != "200" then raise DownloadFailedError.new(url) end
 	    outputfile.write(response.body)
 	  end
 	end
