@@ -60,10 +60,10 @@ see COPYING.
 = Website
 
 This software was written by Entertaining Software, Inc. Visit us at
-<http://www.entertainingsoftware.com/>.
+<http://www.entertainingsoftware.com>.
 
 This software is hosted at GitHub. The project page can be found at
 <http://github.com/Luiji/smc-get>.
 
 This software was written for Secret Maryo Chronicles. Visit them at
-<http://www.secretmaryo.org/>.
+<http://www.secretmaryo.org>.
