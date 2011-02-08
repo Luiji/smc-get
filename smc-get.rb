@@ -181,34 +181,18 @@ class SmcGet
       raise NoSuchPackageError.new(package_name)
     end
     
-    if pkgdata.has_key?('music')
-      pkgdata['music'].each do |filename|
-        begin
-          File.delete(File.join(@datadir, PACKAGE_MUSIC_DIR, filename))
-        rescue Errno::ENOENT
+    %w[music graphics levels].each do |part|
+      if pkgdata.has_key? part
+        pkgdata[part].each do |filename|
+          begin
+            File.delete(File.join(@datadir, self.class.const_get("PACKAGE_#{part.upcase}_DIR"), filename))
+          rescue Errno::ENOENT
+          end
         end
       end
     end
     
-    if pkgdata.has_key?('graphics')
-      pkgdata['graphics'].each do |filename|
-        begin
-          File.delete(File.join(@datadir, PACKAGE_GRAPHICS_DIR, filename))
-        rescue Errno::ENOENT
-        end
-      end
-    end
-    
-    if pkgdata.has_key?('levels')
-      pkgdata['levels'].each do |filename|
-        begin
-          File.delete(File.join(@datadir, PACKAGE_LEVELS_DIR, filename))
-        rescue Errno::ENOENT
-        end
-      end
-    end
-
-    File.delete("#{@datadir}/packages/#{package_name}.yml")
+    File.delete(File.join(@datadir, PACKAGE_SPECS_DIR, "#{package_name}.yml"))
   end
 
   # Get package information.  WARNING: This function is not thread-safe.
