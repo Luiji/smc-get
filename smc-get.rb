@@ -24,6 +24,22 @@ require 'net/https'
 # The SmcGet class provides a set of functions for managing smc-get packages.
 class SmcGet
   
+  #URI where we download everything from. Level names, etc. are
+  #appended to it.
+  BASE_URI = "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/".freeze
+  #Directory where the package specifications are saved to. Relative to the
+  #data directory given in the configuration file.
+  PACKAGE_SPECS_DIR = "packages".freeze
+  #Directory where a package's music files are saved to. Relative to the
+  #data directory given in the configuration file.
+  PACKAGE_MUSIC_DIR = "music/contrib-music".freeze
+  #Directory where a package's graphics files are saved to. Relative to the
+  #data directory given in the configuration file.
+  PACKAGE_GRAPHICS_DIR = "pixmaps/contrib-graphics".freeze
+  #Directory where a package's level files are saved to. Relative to the
+  #data directory given in the configuration file.
+  PACKAGE_LEVELS_DIR = "levels".freeze
+  
   #Superclass for all errors in this library.
   class SmcGetError < StandardError
   end
@@ -107,17 +123,23 @@ class SmcGet
   # Install a package from the repository.
   def install(package_name)
     begin
-      download("packages/#{package_name}.yml", "#{@datadir}/packages/#{package_name}.yml")
+      download(
+        "packages/#{package_name}.yml",
+        File.join(@datadir, PACKAGE_SPECS_DIR, "#{package_name}.yml")
+        )
     rescue DownloadFailedError
       raise NoSuchPackageError.new(package_name)
     end
-
-    pkgdata = YAML.load_file("#{@datadir}/packages/#{package_name}.yml")
+    
+    pkgdata = YAML.load_file(File.join(@datadir, PACKAGE_SPECS_DIR, "#{package_name}.yml"))
     
     if pkgdata.has_key?('music')
       pkgdata['music'].each do |filename|
         begin
-          download("music/#{filename}", "#{@datadir}/music/contrib-music/#{filename}")
+          download(
+            "music/#{filename}",
+            File.join(@datadir, PACKAGE_MUSIC_DIR, filename)
+          )
         rescue DownloadFailedError => error
           raise NoSuchResourceError.new(:music, error.download_url)
         end
@@ -127,7 +149,10 @@ class SmcGet
     if pkgdata.has_key?('graphics')
       pkgdata['graphics'].each do |filename|
         begin
-          download("graphics/#{filename}", "#{@datadir}/pixmaps/contrib-graphics/#{filename}")
+          download(
+            "graphics/#{filename}",
+            File.join(@datadir, PACKAGE_GRAPHICS_DIR, filename)
+          )
         rescue DownloadFailedError => error
           raise NoSuchResourceError.new(:graphic, error.download_url)
         end
@@ -137,7 +162,10 @@ class SmcGet
     if pkgdata.has_key?('levels')
       pkgdata['levels'].each do |filename|
         begin
-          download("levels/#{filename}", "#{@datadir}/levels/#{filename}")
+          download(
+            "levels/#{filename}",
+            File.join(@datadir, PACKAGE_LEVELS_DIR, filename)
+          )
         rescue DownloadFailedError => error
           raise NoSuchResourceError.new(:level, error.download_url)
         end
@@ -148,7 +176,7 @@ class SmcGet
   # Uninstall a package from the local database.
   def uninstall(package_name)
     begin
-      pkgdata = YAML.load_file("#{@datadir}/packages/#{package_name}.yml")
+      pkgdata = YAML.load_file(File.join(@datadir, PACKAGE_SPECS_DIR, "#{package_name}.yml"))
     rescue Errno::ENOENT
       raise NoSuchPackageError.new(package_name)
     end
@@ -156,7 +184,7 @@ class SmcGet
     if pkgdata.has_key?('music')
       pkgdata['music'].each do |filename|
         begin
-          File.delete("#{@datadir}/music/contrib-music/#{filename}")
+          File.delete(File.join(@datadir, PACKAGE_MUSIC_DIR, filename))
         rescue Errno::ENOENT
         end
       end
@@ -165,7 +193,7 @@ class SmcGet
     if pkgdata.has_key?('graphics')
       pkgdata['graphics'].each do |filename|
         begin
-          File.delete("#{@datadir}/pixmaps/contrib-graphics/#{filename}")
+          File.delete(File.join(@datadir, PACKAGE_GRAPHICS_DIR, filename))
         rescue Errno::ENOENT
         end
       end
@@ -174,7 +202,7 @@ class SmcGet
     if pkgdata.has_key?('levels')
       pkgdata['levels'].each do |filename|
         begin
-          File.delete("#{@datadir}/levels/#{filename}")
+          File.delete(File.join(@datadir, PACKAGE_LEVELS_DIR, filename))
         rescue Errno::ENOENT
         end
       end
@@ -209,7 +237,7 @@ class SmcGet
     FileUtils.mkdir_p(File.dirname(output))
     # Download file.
     File.open(output, "w") do |outputfile|
-      uri = URI.parse("https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/#{url}")
+      uri = URI.parse(BASE_URI + url)
       request = Net::HTTP.new(uri.host, uri.port)
       request.use_ssl = true
       request.start do
