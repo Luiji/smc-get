@@ -22,7 +22,6 @@ require 'net/https'
 
 # The SmcGet class provides a set of functions for managing smc-get packages.
 class SmcGet
-  public
 
     # Raised when the class is initialized with a non-existant settings file.
     class CannotFindSettings < Exception
