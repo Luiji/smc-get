@@ -39,6 +39,8 @@ class SmcGet
   #Directory where a package's level files are saved to. Relative to the
   #data directory given in the configuration file.
   PACKAGE_LEVELS_DIR = "levels".freeze
+  #Number of tries smc-get tries to make if the connection fails
+  MAXIMUM_RETRY_NUM = 3
   
   #Superclass for all errors in this library.
   class SmcGetError < StandardError
@@ -234,33 +236,45 @@ class SmcGet
     # Create directories if needed.
     FileUtils.mkdir_p(File.dirname(output))
     # Download file.
-    File.open(output, "w") do |outputfile|
-      uri = URI.parse(BASE_URI + url)
-      base_str = "Downloading #{url}..." #We have to reprint this, as Windows doesn't support ANSI escape sequences...
-      notify(base_str)
-      
-      request = Net::HTTP.new(uri.host, uri.port)
-      request.use_ssl = true #GitHub uses SSL
-      
-      request.start do
-        #1. Establish connection
-        request.request_get(uri.path) do |response|
-          raise(DownloadFailedError.new(url)) unless response.code == "200"
-          #2. Get what size the file is
-          final_size = response.content_length
-          current_size = 0
-          notify("\r#{base_str} (0%)")
-          #3. Get the actual file in parts and report percent done.
-          response.read_body do |part|
-            outputfile.write(part)
-            
-            current_size += part.size
-            percent = (current_size.to_f / final_size.to_f) * 100
-            notify("\r#{base_str} (%.2f%%)" % percent)
+    try_num = 1 #Counts the number of tries to ensure we don't get an infinite loop.
+    begin
+      File.open(output, "w") do |outputfile|
+        uri = URI.parse(BASE_URI + url)
+        base_str = "Downloading #{url}..." #We have to reprint this, as Windows doesn't support ANSI escape sequences...
+        notify(base_str)
+        
+        request = Net::HTTP.new(uri.host, uri.port)
+        request.use_ssl = true #GitHub uses SSL
+        
+        request.start do
+          #1. Establish connection
+          request.request_get(uri.path) do |response|
+            raise(DownloadFailedError.new(url), "Received HTTP error code #{response.code}.") unless response.code == "200"
+            #2. Get what size the file is
+            final_size = response.content_length
+            current_size = 0
+            notify("\r#{base_str} (0%)")
+            #3. Get the actual file in parts and report percent done.
+            response.read_body do |part|
+              outputfile.write(part)
+              
+              current_size += part.size
+              percent = (current_size.to_f / final_size.to_f) * 100
+              notify("\r#{base_str} #{"(%.2f%%)" % percent}") #Extra substition due to possible %'s in the URI
+            end
           end
+          #Ensure the last value the user sees are 100%
+          notify("\r#{base_str} (100.00%)\n")
         end
-        #Ensure the last value the user sees are 100%
-        notify("\r#{base_str} (100.00%)\n")
+      end
+    rescue => err
+      try_num += 1
+      if try_num > MAXIMUM_RETRY_NUM
+        raise #Bubble up
+      else
+        $stderr.puts("#{err.class}: #{err.message}")
+        $stderr.puts("Retrying. Try #{try_num}/#{MAXIMUM_RETRY_NUM}.")
+        retry
       end
     end
   end
