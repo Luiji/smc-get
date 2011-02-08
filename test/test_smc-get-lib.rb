@@ -38,6 +38,10 @@ CONFIG
   #Test initialization. Write the config file and ensure the directory we
   #want to download into is available. Run before EACH test.
   def setup
+    #For getting everything right as it is outputted
+    $stdout.sync = $stderr.sync = true
+    SmcGet.output_info = true
+    
     FileUtils.mkdir_p(TEST_DIR)
     File.open(TEST_CONFIG_FILE, "w"){|f| f.write(TEST_CONFIG)}
     @smc_get = SmcGet.new(TEST_CONFIG_FILE)
