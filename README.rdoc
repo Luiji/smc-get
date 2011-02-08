@@ -1,6 +1,10 @@
 = SMC-GET -- level repository manager for Secret Maryo Chronicles
 smc-get - Library and command-line for managing SMC level packages.
 
+Author::    Luiji Maryo (mailto:luiji@users.sourceforge.net)
+Copyright:: Copyright (C) 2010 Entertaining Software, Inc.
+License::   GNU General Public License (see COPYING)
+
 = Synopsis
  require 'smc-get'
  smcget = SmcGet.new
@@ -19,12 +23,21 @@ for anything other then testing.
 
 = Usage
 
+== Configuration file
+smc-get requires a configuration file. By default it searches for
+<tt>smc-get.yml</tt> in the current working directory, but front-ends can change
+this directory (see below).
+
+All the configuration file needs to contain is <tt>data-directory:</tt> followed
+by the path to the Secret Maryo Chronicles data directory (all on the same
+line).
+
 == Using it as a command-line
 smc-get's main purpose is to be used as a command-line utility.  It should be
 executed in the syntax:
  smc-get COMMAND [PARAMETERS...]
-Where COMMAND is the command and PARAMATERS... are the parameters for that
-command.
+Where <tt>COMMAND</tt> is the command and <tt>PARAMATERS...</tt> are the
+parameters for that command.
 
 To get help on the various commands, use the help command.
  smc-get help
@@ -46,7 +59,7 @@ command-line.
 
 If the function fails, it will raise various exceptions.  When creating a GUI,
 you should catch these exceptions and present them as message boxes.
-begin
+ begin
    smcget.install 'mypackage'
  rescue SmcGet::NoSuchPackageError
    alert 'No such package "mypackage"!'
@@ -60,10 +73,10 @@ see COPYING.
 = Website
 
 This software was written by Entertaining Software, Inc. Visit us at
-<http://www.entertainingsoftware.com/>.
+http://www.entertainingsoftware.com.
 
 This software is hosted at GitHub. The project page can be found at
-<http://github.com/Luiji/smc-get>.
+http://github.com/Luiji/smc-get.
 
 This software was written for Secret Maryo Chronicles. Visit them at
-<http://www.secretmaryo.org/>.
+http://www.secretmaryo.org.
