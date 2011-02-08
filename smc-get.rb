@@ -216,7 +216,7 @@ class SmcGet
   # https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/.
   def download(url, output)
     # Make url friendly.
-    url = url.gsub(/ /, '%20')
+    url = URI.escape(url)
     # Create directories if needed.
     FileUtils.mkdir_p(File.dirname(output))
     # Download file.
