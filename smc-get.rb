@@ -113,30 +113,36 @@ class SmcGet
     end
 
     pkgdata = YAML.load_file("#{@datadir}/packages/#{package_name}.yml")
-
-    pkgdata['music'].each do |filename|
-      begin
-        download("music/#{filename}", "#{@datadir}/music/contrib-music/#{filename}")
-      rescue DownloadFailedError => error
-        raise NoSuchResourceError.new(:music, error.download_url)
+    
+    if pkgdata.has_key?('music')
+      pkgdata['music'].each do |filename|
+        begin
+          download("music/#{filename}", "#{@datadir}/music/contrib-music/#{filename}")
+        rescue DownloadFailedError => error
+          raise NoSuchResourceError.new(:music, error.download_url)
+        end
       end
-    end if pkgdata.has_key?('music')
-
-    pkgdata['graphics'].each do |filename|
-      begin
-        download("graphics/#{filename}", "#{@datadir}/pixmaps/contrib-graphics/#{filename}")
-      rescue DownloadFailedError => error
-        raise NoSuchResourceError.new(:graphic, error.download_url)
+    end
+    
+    if pkgdata.has_key?('graphics')
+      pkgdata['graphics'].each do |filename|
+        begin
+          download("graphics/#{filename}", "#{@datadir}/pixmaps/contrib-graphics/#{filename}")
+        rescue DownloadFailedError => error
+          raise NoSuchResourceError.new(:graphic, error.download_url)
+        end
       end
-    end if pkgdata.has_key?('graphics')
-
-    pkgdata['levels'].each do |filename|
-      begin
-        download("levels/#{filename}", "#{@datadir}/levels/#{filename}")
-      rescue DownloadFailedError => error
-        raise NoSuchResourceError.new(:level, error.download_url)
+    end
+    
+    if pkgdata.has_key?('levels')
+      pkgdata['levels'].each do |filename|
+        begin
+          download("levels/#{filename}", "#{@datadir}/levels/#{filename}")
+        rescue DownloadFailedError => error
+          raise NoSuchResourceError.new(:level, error.download_url)
+        end
       end
-    end if pkgdata.has_key?('levels')
+    end
   end
 
   # Uninstall a package from the local database.
