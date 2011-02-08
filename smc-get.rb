@@ -22,9 +22,13 @@ require 'net/https'
 
 # The SmcGet class provides a set of functions for managing smc-get packages.
 class SmcGet
-    
+  
+  #Superclass for all errors in this library.
+  class SmcGetError < StandardError
+  end
+  
   # Raised when the class is initialized with a non-existant settings file.
-  class CannotFindSettings < Exception
+  class CannotFindSettings < SmcGetError
     # The path to the settings file that was specified.
     attr_reader :settings_path
 
@@ -36,7 +40,7 @@ class SmcGet
 
   # Raised when a package call is made but the specified package cannot be
   # found.
-  class NoSuchPackageError < Exception
+  class NoSuchPackageError < SmcGetError
     # The name of the package that could not be found.
     attr_reader :package_name
 
@@ -48,7 +52,7 @@ class SmcGet
 
   # Raised when a package call is made but one of the resources of the
   # specified package is missing.
-  class NoSuchResourceError < Exception
+  class NoSuchResourceError < SmcGetError
     # The type of resource (should be either :music, :graphic, or :level).
     attr_reader :resource_type
     # The name of the resource (i.e. mylevel.lvl or Stuff/Cheeseburger.png).
@@ -77,6 +81,17 @@ class SmcGet
     end
   end
 
+  # Raised when a call to download() fails.
+  class DownloadFailedError < SmcGetError
+    # The URL that failed to download (including everything after /raw/master
+    # only).
+    attr_reader :download_url
+
+    def initialize(url)
+      @download_url = url
+    end
+  end
+  
   # Initialize an instance of the SmcGet class with the specified
   # configuration file.  The default configuration file is smc-get.yml.
   def initialize(config_file = 'smc-get.yml')
@@ -170,17 +185,6 @@ class SmcGet
   end
 
   private
-
-  # Raised when a call to download() fails.
-  class DownloadFailedError < Exception
-    # The URL that failed to download (including everything after /raw/master
-    # only).
-    attr_reader :download_url
-
-    def initialize(url)
-      @download_url = url
-    end
-  end
 
   # Download the specified raw file from the repository to the specified
   # output file.  URL should be everything in the URL after
