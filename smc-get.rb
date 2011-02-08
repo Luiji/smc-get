@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 require 'tempfile'
+require "fileutils"
 require 'yaml'
 require 'uri'
 require 'net/https'
@@ -193,13 +194,7 @@ class SmcGet
     # Make url friendly.
     url = url.gsub(/ /, '%20')
     # Create directories if needed.
-    dirs = File.dirname(output).split('/')
-    dirs.count.times do |i|
-      dirp = File.join(dirs[0..i])
-      if not File.directory?(dirp) then
-        Dir.mkdir(dirp)
-      end
-    end
+    FileUtils.mkdir_p(File.dirname(output))
     # Download file.
     File.open(output, "w") do |outputfile|
       uri = URI.parse("https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/#{url}")
