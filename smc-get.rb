@@ -22,193 +22,193 @@ require 'net/https'
 
 # The SmcGet class provides a set of functions for managing smc-get packages.
 class SmcGet
+    
+  # Raised when the class is initialized with a non-existant settings file.
+  class CannotFindSettings < Exception
+    # The path to the settings file that was specified.
+    attr_reader :settings_path
 
-    # Raised when the class is initialized with a non-existant settings file.
-    class CannotFindSettings < Exception
-      # The path to the settings file that was specified.
-      attr_reader :settings_path
+    # Create a new instance of the exception with the settings path.
+    def initialize(settings_path)
+      @settings_path = settings_path
+    end
+  end
 
-      # Create a new instance of the exception with the settings path.
-      def initialize(settings_path)
-        @settings_path = settings_path
-      end
+  # Raised when a package call is made but the specified package cannot be
+  # found.
+  class NoSuchPackageError < Exception
+    # The name of the package that could not be found.
+    attr_reader :package_name
+
+    # Create a new instance of the exception with the specified package name.
+    def initialize(name)
+      @package_name = name
+    end
+  end
+
+  # Raised when a package call is made but one of the resources of the
+  # specified package is missing.
+  class NoSuchResourceError < Exception
+    # The type of resource (should be either :music, :graphic, or :level).
+    attr_reader :resource_type
+    # The name of the resource (i.e. mylevel.lvl or Stuff/Cheeseburger.png).
+    attr_reader :resource_name
+
+    # Create a new instance of the exception with the specified resource type
+    # and name.  Type should either be :music, :graphic, or :level.
+    def initialize(type, name)
+      @resource_type = type
+      @resource_name = name
     end
 
-    # Raised when a package call is made but the specified package cannot be
-    # found.
-    class NoSuchPackageError < Exception
-      # The name of the package that could not be found.
-      attr_reader :package_name
-
-      # Create a new instance of the exception with the specified package name.
-      def initialize(name)
-        @package_name = name
-      end
+    # Returns true if the resource type is :music.  False otherwise.
+    def is_music
+      @resource_type == :music
     end
 
-    # Raised when a package call is made but one of the resources of the
-    # specified package is missing.
-    class NoSuchResourceError < Exception
-      # The type of resource (should be either :music, :graphic, or :level).
-      attr_reader :resource_type
-      # The name of the resource (i.e. mylevel.lvl or Stuff/Cheeseburger.png).
-      attr_reader :resource_name
-
-      # Create a new instance of the exception with the specified resource type
-      # and name.  Type should either be :music, :graphic, or :level.
-      def initialize(type, name)
-        @resource_type = type
-        @resource_name = name
-      end
-
-      # Returns true if the resource type is :music.  False otherwise.
-      def is_music
-        @resource_type == :music
-      end
-
-      # Returns true if the resource type is :graphic.  False otherwise.
-      def is_graphic
-        @resource_type == :graphic
-      end
-
-      # Returns true if the resource type is :level.  False otherwise.
-      def is_level
-        @resource_type == :level
-      end
+    # Returns true if the resource type is :graphic.  False otherwise.
+    def is_graphic
+      @resource_type == :graphic
     end
 
-    # Initialize an instance of the SmcGet class with the specified
-    # configuration file.  The default configuration file is smc-get.yml.
-    def initialize(config_file = 'smc-get.yml')
+    # Returns true if the resource type is :level.  False otherwise.
+    def is_level
+      @resource_type == :level
+    end
+  end
+
+  # Initialize an instance of the SmcGet class with the specified
+  # configuration file.  The default configuration file is smc-get.yml.
+  def initialize(config_file = 'smc-get.yml')
+    begin
+      settings = YAML.load_file(config_file)
+    rescue Errno::ENOENT
+      raise CannotFindSettings.new(config_file)
+    end
+    @datadir = settings['data-directory']
+  end
+
+  # Install a package from the repository.
+  def install(package_name)
+    begin
+      download("packages/#{package_name}.yml", "#{@datadir}/packages/#{package_name}.yml")
+    rescue DownloadFailedError
+      raise NoSuchPackageError.new(package_name)
+    end
+
+    pkgdata = YAML.load_file("#{@datadir}/packages/#{package_name}.yml")
+
+    pkgdata['music'].each do |filename|
       begin
-        settings = YAML.load_file(config_file)
+        download("music/#{filename}", "#{@datadir}/music/contrib-music/#{filename}")
+      rescue DownloadFailedError => error
+        raise NoSuchResourceError.new(:music, error.download_url)
+      end
+    end if pkgdata.has_key?('music')
+
+    pkgdata['graphics'].each do |filename|
+      begin
+        download("graphics/#{filename}", "#{@datadir}/pixmaps/contrib-graphics/#{filename}")
+      rescue DownloadFailedError => error
+        raise NoSuchResourceError.new(:graphic, error.download_url)
+      end
+    end if pkgdata.has_key?('graphics')
+
+    pkgdata['levels'].each do |filename|
+      begin
+        download("levels/#{filename}", "#{@datadir}/levels/#{filename}")
+      rescue DownloadFailedError => error
+        raise NoSuchResourceError.new(:level, error.download_url)
+      end
+    end if pkgdata.has_key?('levels')
+  end
+
+  # Uninstall a package from the local database.
+  def uninstall(package_name)
+    begin
+      pkgdata = YAML.load_file("#{@datadir}/packages/#{package_name}.yml")
+    rescue Errno::ENOENT
+      raise NoSuchPackageError.new(package_name)
+    end
+
+    pkgdata['music'].each do |filename|
+      begin
+        File.delete("#{@datadir}/music/contrib-music/#{filename}")
       rescue Errno::ENOENT
-        raise CannotFindSettings.new(config_file)
       end
-      @datadir = settings['data-directory']
-    end
+    end if pkgdata.has_key?('music')
 
-    # Install a package from the repository.
-    def install(package_name)
+    pkgdata['graphics'].each do |filename|
       begin
-        download("packages/#{package_name}.yml", "#{@datadir}/packages/#{package_name}.yml")
+        File.delete("#{@datadir}/pixmaps/contrib-graphics/#{filename}")
+      rescue Errno::ENOENT
+      end
+    end if pkgdata.has_key?('graphics')
+
+    pkgdata['levels'].each do |filename|
+      begin
+        File.delete("#{@datadir}/levels/#{filename}")
+      rescue Errno::ENOENT
+      end
+    end if pkgdata.has_key?('levels')
+
+    File.delete("#{@datadir}/packages/#{package_name}.yml")
+  end
+
+  # Get package information.  WARNING: This function is not thread-safe.
+  def getinfo(package_name)
+    yaml = nil
+    Tempfile.open('pkgdata') do |tmp|
+      begin
+        download("packages/#{package_name}.yml", tmp.path)
       rescue DownloadFailedError
         raise NoSuchPackageError.new(package_name)
       end
-
-      pkgdata = YAML.load_file("#{@datadir}/packages/#{package_name}.yml")
-
-      pkgdata['music'].each do |filename|
-        begin
-          download("music/#{filename}", "#{@datadir}/music/contrib-music/#{filename}")
-        rescue DownloadFailedError => error
-          raise NoSuchResourceError.new(:music, error.download_url)
-        end
-      end if pkgdata.has_key?('music')
-
-      pkgdata['graphics'].each do |filename|
-        begin
-          download("graphics/#{filename}", "#{@datadir}/pixmaps/contrib-graphics/#{filename}")
-        rescue DownloadFailedError => error
-          raise NoSuchResourceError.new(:graphic, error.download_url)
-        end
-      end if pkgdata.has_key?('graphics')
-
-      pkgdata['levels'].each do |filename|
-        begin
-          download("levels/#{filename}", "#{@datadir}/levels/#{filename}")
-        rescue DownloadFailedError => error
-          raise NoSuchResourceError.new(:level, error.download_url)
-        end
-      end if pkgdata.has_key?('levels')
+      yaml = YAML.load_file(tmp.path)
     end
-
-    # Uninstall a package from the local database.
-    def uninstall(package_name)
-      begin
-        pkgdata = YAML.load_file("#{@datadir}/packages/#{package_name}.yml")
-      rescue Errno::ENOENT
-        raise NoSuchPackageError.new(package_name)
-      end
-
-      pkgdata['music'].each do |filename|
-        begin
-          File.delete("#{@datadir}/music/contrib-music/#{filename}")
-        rescue Errno::ENOENT
-        end
-      end if pkgdata.has_key?('music')
-
-      pkgdata['graphics'].each do |filename|
-        begin
-          File.delete("#{@datadir}/pixmaps/contrib-graphics/#{filename}")
-        rescue Errno::ENOENT
-        end
-      end if pkgdata.has_key?('graphics')
-
-      pkgdata['levels'].each do |filename|
-        begin
-          File.delete("#{@datadir}/levels/#{filename}")
-        rescue Errno::ENOENT
-        end
-      end if pkgdata.has_key?('levels')
-
-      File.delete("#{@datadir}/packages/#{package_name}.yml")
-    end
-
-    # Get package information.  WARNING: This function is not thread-safe.
-    def getinfo(package_name)
-      yaml = nil
-      Tempfile.open('pkgdata') do |tmp|
-        begin
-          download("packages/#{package_name}.yml", tmp.path)
-        rescue DownloadFailedError
-          raise NoSuchPackageError.new(package_name)
-        end
-        yaml = YAML.load_file(tmp.path)
-      end
-      return yaml
-    end
+    return yaml
+  end
 
   private
 
-    # Raised when a call to download() fails.
-    class DownloadFailedError < Exception
-      # The URL that failed to download (including everything after /raw/master
-      # only).
-      attr_reader :download_url
+  # Raised when a call to download() fails.
+  class DownloadFailedError < Exception
+    # The URL that failed to download (including everything after /raw/master
+    # only).
+    attr_reader :download_url
 
-      def initialize(url)
-        @download_url = url
+    def initialize(url)
+      @download_url = url
+    end
+  end
+
+  # Download the specified raw file from the repository to the specified
+  # output file.  URL should be everything in the URL after
+  # https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/.
+  def download(url, output)
+    # Make url friendly.
+    url = url.gsub(/ /, '%20')
+    # Create directories if needed.
+    dirs = File.dirname(output).split('/')
+    dirs.count.times do |i|
+      dirp = File.join(dirs[0..i])
+      if not File.directory?(dirp) then
+        Dir.mkdir(dirp)
       end
     end
-
-    # Download the specified raw file from the repository to the specified
-    # output file.  URL should be everything in the URL after
-    # https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/.
-    def download(url, output)
-      # Make url friendly.
-      url = url.gsub(/ /, '%20')
-      # Create directories if needed.
-      dirs = File.dirname(output).split('/')
-      dirs.count.times do |i|
-        dirp = File.join(dirs[0..i])
-        if not File.directory?(dirp) then
-          Dir.mkdir(dirp)
-        end
-      end
-      # Download file.
-      File.open(output, "w") do |outputfile|
-        uri = URI.parse("https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/#{url}")
-        request = Net::HTTP.new(uri.host, uri.port)
-        request.use_ssl = true
-        request.start do
-          request.request_get(uri.path) do |response|
-            if response.code != "200" then raise DownloadFailedError.new(url) end
-            outputfile.write(response.body)
-          end
+    # Download file.
+    File.open(output, "w") do |outputfile|
+      uri = URI.parse("https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/#{url}")
+      request = Net::HTTP.new(uri.host, uri.port)
+      request.use_ssl = true
+      request.start do
+        request.request_get(uri.path) do |response|
+          if response.code != "200" then raise DownloadFailedError.new(url) end
+          outputfile.write(response.body)
         end
       end
     end
+  end
 end
 
 # This code is executed if the script is being executed as a command as supposed
@@ -269,5 +269,3 @@ if __FILE__ == $0
     smcget.uninstall(ARGV[1])
   end
 end
-
-# vim: ts=8 sts=2 sw=2 noet:
