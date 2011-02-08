@@ -152,27 +152,33 @@ class SmcGet
     rescue Errno::ENOENT
       raise NoSuchPackageError.new(package_name)
     end
-
-    pkgdata['music'].each do |filename|
-      begin
-        File.delete("#{@datadir}/music/contrib-music/#{filename}")
-      rescue Errno::ENOENT
+    
+    if pkgdata.has_key?('music')
+      pkgdata['music'].each do |filename|
+        begin
+          File.delete("#{@datadir}/music/contrib-music/#{filename}")
+        rescue Errno::ENOENT
+        end
       end
-    end if pkgdata.has_key?('music')
-
-    pkgdata['graphics'].each do |filename|
-      begin
-        File.delete("#{@datadir}/pixmaps/contrib-graphics/#{filename}")
-      rescue Errno::ENOENT
+    end
+    
+    if pkgdata.has_key?('graphics')
+      pkgdata['graphics'].each do |filename|
+        begin
+          File.delete("#{@datadir}/pixmaps/contrib-graphics/#{filename}")
+        rescue Errno::ENOENT
+        end
       end
-    end if pkgdata.has_key?('graphics')
-
-    pkgdata['levels'].each do |filename|
-      begin
-        File.delete("#{@datadir}/levels/#{filename}")
-      rescue Errno::ENOENT
+    end
+    
+    if pkgdata.has_key?('levels')
+      pkgdata['levels'].each do |filename|
+        begin
+          File.delete("#{@datadir}/levels/#{filename}")
+        rescue Errno::ENOENT
+        end
       end
-    end if pkgdata.has_key?('levels')
+    end
 
     File.delete("#{@datadir}/packages/#{package_name}.yml")
   end
