@@ -4,7 +4,7 @@ require "fileutils"
 require "test/unit"
 
 if RUBY_VERSION =~ /^1.9/
-  require_relative "../smc-get"
+  require_relative "../lib/smc_get/smc_get"
 else #For 1.8 fans
   require File.join(File.expand_path(File.dirname(__FILE__)), "..", "smc_get")
 end
@@ -13,6 +13,8 @@ end
 #works well.
 class SmcGetLibraryTest < Test::Unit::TestCase
   
+  #Directory from which packages are downloaded for the test.
+  TEST_REPO = "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/"
   #Directory where we will download everything into. It's "testdir" right in this directory.
   TEST_DIR = File.join(File.expand_path(File.dirname(__FILE__)), "testdir")
   TEST_PACKAGES_DIR = File.join(TEST_DIR, "packages")
@@ -38,13 +40,9 @@ CONFIG
   #Test initialization. Write the config file and ensure the directory we
   #want to download into is available. Run before EACH test.
   def setup
-    #For getting everything right as it is outputted
-    $stdout.sync = $stderr.sync = true
-    SmcGet.output_info = true
-    
     FileUtils.mkdir_p(TEST_DIR)
     File.open(TEST_CONFIG_FILE, "w"){|f| f.write(TEST_CONFIG)}
-    @smc_get = SmcGet.new(TEST_CONFIG_FILE)
+    @smc_get = SmcGet::SmcGet.new(TEST_REPO, TEST_DIR)
   end
   
   #Cleanup afterwards. Delete our testing directory. Run after EACH test.
@@ -58,7 +56,7 @@ CONFIG
       puts "Test installing #{pkg}"
       @smc_get.install(pkg)
     
-      pkg_config_file = File.join(TEST_PACKAGES_DIR, pkg + ".yml")
+      pkg_config_file = File.join(TEST_PACKAGES_DIR, "#{pkg}.yml")
       assert(File.file?(pkg_config_file), "Package config file for #{pkg} not found.")
       
       pkg_config = YAML.load_file(pkg_config_file)
@@ -74,7 +72,7 @@ CONFIG
     end
     
     TEST_INVALID_PACKAGES.each do |pkg|
-      assert_raises(SmcGet::NoSuchPackageError){@smc_get.install(pkg)}
+      assert_raises(SmcGet::Errors::NoSuchPackageError){@smc_get.install(pkg)}
     end
   end
   
@@ -87,7 +85,7 @@ CONFIG
       puts "Test uninstalling #{pkg}"
       @smc_get.install(pkg) #We can't uninstall a package that is not installed
   
-      pkg_config_file = File.join(TEST_PACKAGES_DIR, pkg + ".yml")
+      pkg_config_file = File.join(TEST_PACKAGES_DIR, "#{pkg}.yml")
       pkg_config = YAML.load_file(pkg_config_file)
   
       @smc_get.uninstall(pkg)
@@ -104,7 +102,7 @@ CONFIG
     end
   
     TEST_INVALID_PACKAGES.each do |pkg|
-      assert_raises(SmcGet::NoSuchPackageError){@smc_get.uninstall(pkg)}
+      assert_raises(SmcGet::Errors::NoSuchPackageError){@smc_get.uninstall(pkg)}
     end
   end
   
@@ -113,14 +111,14 @@ CONFIG
       puts "Test getting info about #{pkg}"
       @smc_get.install(pkg) #We can't check specs from packages not installed
   
-      pkg_config_file = File.join(TEST_PACKAGES_DIR, pkg + ".yml")
+      pkg_config_file = File.join(TEST_PACKAGES_DIR, "#{pkg}.yml")
       pkg_config = YAML.load_file(pkg_config_file)
   
       assert_equal(pkg_config, @smc_get.getinfo(pkg))
     end
   
     TEST_INVALID_PACKAGES.each do |pkg|
-      assert_raises(SmcGet::NoSuchPackageError){@smc_get.getinfo(pkg)}
+      assert_raises(SmcGet::Errors::NoSuchPackageError){@smc_get.getinfo(pkg)}
     end
   end
   
