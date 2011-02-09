@@ -39,6 +39,8 @@ class SmcGet
   #Directory where a package's level files are saved to. Relative to the
   #data directory given in the configuration file.
   PACKAGE_LEVELS_DIR = "levels".freeze
+  #Number of tries smc-get tries to make if the connection fails
+  MAXIMUM_RETRY_NUM = 3
   
   #Superclass for all errors in this library.
   class SmcGetError < StandardError
@@ -109,6 +111,17 @@ class SmcGet
     end
   end
   
+  #Do not print any output by default (library mode).
+  @output_info = false
+  
+  def self.output_info=(val)
+    @output_info = val
+  end
+  
+  def self.outputting_info?
+    @output_info
+  end
+  
   # Initialize an instance of the SmcGet class with the specified
   # configuration file.  The default configuration file is smc-get.yml.
   def initialize(config_file = 'smc-get.yml')
@@ -122,13 +135,14 @@ class SmcGet
 
   # Install a package from the repository.
   def install(package_name)
+    notify("Installing #{package_name}.\n")
     begin
       download(
         "packages/#{package_name}.yml",
         File.join(@datadir, PACKAGE_SPECS_DIR, "#{package_name}.yml")
         )
     rescue DownloadFailedError
-      raise NoSuchPackageError.new(package_name)
+      raise(NoSuchPackageError.new(package_name), "ERROR: Package not found in the repository: #{package_name}.")
     end
     
     pkgdata = YAML.load_file(File.join(@datadir, PACKAGE_SPECS_DIR, "#{package_name}.yml"))
@@ -141,7 +155,7 @@ class SmcGet
             File.join(@datadir, PACKAGE_MUSIC_DIR, filename)
           )
         rescue DownloadFailedError => error
-          raise NoSuchResourceError.new(:music, error.download_url)
+          raise(NoSuchResourceError.new(:music, error.download_url), "ERROR: Music not found in the repository: #{filename}.")
         end
       end
     end
@@ -154,7 +168,7 @@ class SmcGet
             File.join(@datadir, PACKAGE_GRAPHICS_DIR, filename)
           )
         rescue DownloadFailedError => error
-          raise NoSuchResourceError.new(:graphic, error.download_url)
+          raise(NoSuchResourceError.new(:graphic, error.download_url), "ERROR: Graphic not found in the repository: #{filename}.")
         end
       end
     end
@@ -167,7 +181,7 @@ class SmcGet
             File.join(@datadir, PACKAGE_LEVELS_DIR, filename)
           )
         rescue DownloadFailedError => error
-          raise NoSuchResourceError.new(:level, error.download_url)
+          raise(NoSuchResourceError.new(:level, error.download_url), "ERROR: Level not found in the repository: #{filename}.")
         end
       end
     end
@@ -175,10 +189,11 @@ class SmcGet
 
   # Uninstall a package from the local database.
   def uninstall(package_name)
+    notify("Uninstalling #{package_name}...\n")
     begin
       pkgdata = YAML.load_file(File.join(@datadir, PACKAGE_SPECS_DIR, "#{package_name}.yml"))
     rescue Errno::ENOENT
-      raise NoSuchPackageError.new(package_name)
+      raise(NoSuchPackageError.new(package_name), "ERROR: Local package not found: #{package_name}.")
     end
     
     %w[music graphics levels].each do |part|
@@ -197,12 +212,13 @@ class SmcGet
 
   # Get package information.  WARNING: This function is not thread-safe.
   def getinfo(package_name)
+    notify("Searching the repository for #{package_name}...\n")
     yaml = nil
     Tempfile.open('pkgdata') do |tmp|
       begin
         download("packages/#{package_name}.yml", tmp.path)
       rescue DownloadFailedError
-        raise NoSuchPackageError.new(package_name)
+        raise(NoSuchPackageError.new(package_name), "ERROR: Package not found in the repository: #{package_name}")
       end
       yaml = YAML.load_file(tmp.path)
     end
@@ -220,25 +236,63 @@ class SmcGet
     # Create directories if needed.
     FileUtils.mkdir_p(File.dirname(output))
     # Download file.
-    File.open(output, "w") do |outputfile|
-      uri = URI.parse(BASE_URI + url)
-      request = Net::HTTP.new(uri.host, uri.port)
-      request.use_ssl = true
-      request.start do
-        request.request_get(uri.path) do |response|
-          if response.code != "200" then raise DownloadFailedError.new(url) end
-          outputfile.write(response.body)
+    try_num = 1 #Counts the number of tries to ensure we don't get an infinite loop.
+    begin
+      File.open(output, "w") do |outputfile|
+        uri = URI.parse(BASE_URI + url)
+        base_str = "Downloading #{url}..." #We have to reprint this, as Windows doesn't support ANSI escape sequences...
+        notify(base_str)
+        
+        request = Net::HTTP.new(uri.host, uri.port)
+        request.use_ssl = true #GitHub uses SSL
+        
+        request.start do
+          #1. Establish connection
+          request.request_get(uri.path) do |response|
+            raise(DownloadFailedError.new(url), "Received HTTP error code #{response.code}.") unless response.code == "200"
+            #2. Get what size the file is
+            final_size = response.content_length
+            current_size = 0
+            notify("\r#{base_str} (0%)")
+            #3. Get the actual file in parts and report percent done.
+            response.read_body do |part|
+              outputfile.write(part)
+              
+              current_size += part.size
+              percent = (current_size.to_f / final_size.to_f) * 100
+              notify("\r#{base_str} #{"(%.2f%%)" % percent}") #Extra substition due to possible %'s in the URI
+            end
+          end
+          #Ensure the last value the user sees are 100%
+          notify("\r#{base_str} (100.00%)\n")
         end
+      end
+    rescue => err
+      try_num += 1
+      if try_num > MAXIMUM_RETRY_NUM
+        raise #Bubble up
+      else
+        $stderr.puts("#{err.class}: #{err.message}")
+        $stderr.puts("Retrying. Try #{try_num}/#{MAXIMUM_RETRY_NUM}.")
+        retry
       end
     end
   end
+  
+  def notify(str)
+    print(str) if self.class.outputting_info?
+  end
+  
 end
 
 # This code is executed if the script is being executed as a command as supposed
 # to being loaded as a library.
 if __FILE__ == $0
-  if ARGV.length == 0 then ARGV[0] = 'help' end
-
+  #We're running from the commandline, so we can be a bit informative:
+  SmcGet.output_info = true
+  
+  ARGV[0] = "help" if ARGV.empty?
+  
   begin
     case ARGV[0]
       when 'help'
@@ -281,14 +335,9 @@ if __FILE__ == $0
       else
         puts "Unrecognized command #{ARGV[0]}."
     end
-  rescue SmcGet::CannotFindSettings => error
-    puts "Cannot find settings file (\"#{error.settings_path}\")."
-  rescue SmcGet::NoSuchPackageError => error
-    puts "No such package #{error.package_name}."
-  rescue SmcGet::NoSuchResourceError => error
-    puts "No such #{error.resource_type} resource #{error.resource_name}."
-    puts "Package #{ARGV[1]} has broken dependencies."
-    puts "Uninstalling previously installed files for #{ARGV[1]}..."
-    smcget.uninstall(ARGV[1])
+  rescue SmcGet::SmcGetError => error
+    $stderr.puts(error.message)
+    smcget.uninstall(ARGV[1]) if error.class == SmcGet::NoSuchResourceError
+    exit 1
   end
 end
