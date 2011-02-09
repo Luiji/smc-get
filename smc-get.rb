@@ -16,15 +16,36 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 require 'tempfile'
+require "fileutils"
 require 'yaml'
 require 'uri'
 require 'net/https'
 
 # The SmcGet class provides a set of functions for managing smc-get packages.
 class SmcGet
-    
+  
+  #URI where we download everything from. Level names, etc. are
+  #appended to it.
+  BASE_URI = "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/".freeze
+  #Directory where the package specifications are saved to. Relative to the
+  #data directory given in the configuration file.
+  PACKAGE_SPECS_DIR = "packages".freeze
+  #Directory where a package's music files are saved to. Relative to the
+  #data directory given in the configuration file.
+  PACKAGE_MUSIC_DIR = "music/contrib-music".freeze
+  #Directory where a package's graphics files are saved to. Relative to the
+  #data directory given in the configuration file.
+  PACKAGE_GRAPHICS_DIR = "pixmaps/contrib-graphics".freeze
+  #Directory where a package's level files are saved to. Relative to the
+  #data directory given in the configuration file.
+  PACKAGE_LEVELS_DIR = "levels".freeze
+  
+  #Superclass for all errors in this library.
+  class SmcGetError < StandardError
+  end
+  
   # Raised when the class is initialized with a non-existant settings file.
-  class CannotFindSettings < Exception
+  class CannotFindSettings < SmcGetError
     # The path to the settings file that was specified.
     attr_reader :settings_path
 
@@ -36,7 +57,7 @@ class SmcGet
 
   # Raised when a package call is made but the specified package cannot be
   # found.
-  class NoSuchPackageError < Exception
+  class NoSuchPackageError < SmcGetError
     # The name of the package that could not be found.
     attr_reader :package_name
 
@@ -48,7 +69,7 @@ class SmcGet
 
   # Raised when a package call is made but one of the resources of the
   # specified package is missing.
-  class NoSuchResourceError < Exception
+  class NoSuchResourceError < SmcGetError
     # The type of resource (should be either :music, :graphic, or :level).
     attr_reader :resource_type
     # The name of the resource (i.e. mylevel.lvl or Stuff/Cheeseburger.png).
@@ -62,21 +83,32 @@ class SmcGet
     end
 
     # Returns true if the resource type is :music.  False otherwise.
-    def is_music
+    def is_music?
       @resource_type == :music
     end
 
     # Returns true if the resource type is :graphic.  False otherwise.
-    def is_graphic
+    def is_graphic?
       @resource_type == :graphic
     end
 
     # Returns true if the resource type is :level.  False otherwise.
-    def is_level
+    def is_level?
       @resource_type == :level
     end
   end
 
+  # Raised when a call to download() fails.
+  class DownloadFailedError < SmcGetError
+    # The URL that failed to download (including everything after /raw/master
+    # only).
+    attr_reader :download_url
+
+    def initialize(url)
+      @download_url = url
+    end
+  end
+  
   # Initialize an instance of the SmcGet class with the specified
   # configuration file.  The default configuration file is smc-get.yml.
   def initialize(config_file = 'smc-get.yml')
@@ -91,68 +123,76 @@ class SmcGet
   # Install a package from the repository.
   def install(package_name)
     begin
-      download("packages/#{package_name}.yml", "#{@datadir}/packages/#{package_name}.yml")
+      download(
+        "packages/#{package_name}.yml",
+        File.join(@datadir, PACKAGE_SPECS_DIR, "#{package_name}.yml")
+        )
     rescue DownloadFailedError
       raise NoSuchPackageError.new(package_name)
     end
-
-    pkgdata = YAML.load_file("#{@datadir}/packages/#{package_name}.yml")
-
-    pkgdata['music'].each do |filename|
-      begin
-        download("music/#{filename}", "#{@datadir}/music/contrib-music/#{filename}")
-      rescue DownloadFailedError => error
-        raise NoSuchResourceError.new(:music, error.download_url)
+    
+    pkgdata = YAML.load_file(File.join(@datadir, PACKAGE_SPECS_DIR, "#{package_name}.yml"))
+    
+    if pkgdata.has_key?('music')
+      pkgdata['music'].each do |filename|
+        begin
+          download(
+            "music/#{filename}",
+            File.join(@datadir, PACKAGE_MUSIC_DIR, filename)
+          )
+        rescue DownloadFailedError => error
+          raise NoSuchResourceError.new(:music, error.download_url)
+        end
       end
-    end if pkgdata.has_key?('music')
-
-    pkgdata['graphics'].each do |filename|
-      begin
-        download("graphics/#{filename}", "#{@datadir}/pixmaps/contrib-graphics/#{filename}")
-      rescue DownloadFailedError => error
-        raise NoSuchResourceError.new(:graphic, error.download_url)
+    end
+    
+    if pkgdata.has_key?('graphics')
+      pkgdata['graphics'].each do |filename|
+        begin
+          download(
+            "graphics/#{filename}",
+            File.join(@datadir, PACKAGE_GRAPHICS_DIR, filename)
+          )
+        rescue DownloadFailedError => error
+          raise NoSuchResourceError.new(:graphic, error.download_url)
+        end
       end
-    end if pkgdata.has_key?('graphics')
-
-    pkgdata['levels'].each do |filename|
-      begin
-        download("levels/#{filename}", "#{@datadir}/levels/#{filename}")
-      rescue DownloadFailedError => error
-        raise NoSuchResourceError.new(:level, error.download_url)
+    end
+    
+    if pkgdata.has_key?('levels')
+      pkgdata['levels'].each do |filename|
+        begin
+          download(
+            "levels/#{filename}",
+            File.join(@datadir, PACKAGE_LEVELS_DIR, filename)
+          )
+        rescue DownloadFailedError => error
+          raise NoSuchResourceError.new(:level, error.download_url)
+        end
       end
-    end if pkgdata.has_key?('levels')
+    end
   end
 
   # Uninstall a package from the local database.
   def uninstall(package_name)
     begin
-      pkgdata = YAML.load_file("#{@datadir}/packages/#{package_name}.yml")
+      pkgdata = YAML.load_file(File.join(@datadir, PACKAGE_SPECS_DIR, "#{package_name}.yml"))
     rescue Errno::ENOENT
       raise NoSuchPackageError.new(package_name)
     end
-
-    pkgdata['music'].each do |filename|
-      begin
-        File.delete("#{@datadir}/music/contrib-music/#{filename}")
-      rescue Errno::ENOENT
+    
+    %w[music graphics levels].each do |part|
+      if pkgdata.has_key? part
+        pkgdata[part].each do |filename|
+          begin
+            File.delete(File.join(@datadir, self.class.const_get("PACKAGE_#{part.upcase}_DIR"), filename))
+          rescue Errno::ENOENT
+          end
+        end
       end
-    end if pkgdata.has_key?('music')
-
-    pkgdata['graphics'].each do |filename|
-      begin
-        File.delete("#{@datadir}/pixmaps/contrib-graphics/#{filename}")
-      rescue Errno::ENOENT
-      end
-    end if pkgdata.has_key?('graphics')
-
-    pkgdata['levels'].each do |filename|
-      begin
-        File.delete("#{@datadir}/levels/#{filename}")
-      rescue Errno::ENOENT
-      end
-    end if pkgdata.has_key?('levels')
-
-    File.delete("#{@datadir}/packages/#{package_name}.yml")
+    end
+    
+    File.delete(File.join(@datadir, PACKAGE_SPECS_DIR, "#{package_name}.yml"))
   end
 
   # Get package information.  WARNING: This function is not thread-safe.
@@ -171,34 +211,17 @@ class SmcGet
 
   private
 
-  # Raised when a call to download() fails.
-  class DownloadFailedError < Exception
-    # The URL that failed to download (including everything after /raw/master
-    # only).
-    attr_reader :download_url
-
-    def initialize(url)
-      @download_url = url
-    end
-  end
-
   # Download the specified raw file from the repository to the specified
   # output file.  URL should be everything in the URL after
   # https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/.
   def download(url, output)
     # Make url friendly.
-    url = url.gsub(/ /, '%20')
+    url = URI.escape(url)
     # Create directories if needed.
-    dirs = File.dirname(output).split('/')
-    dirs.count.times do |i|
-      dirp = File.join(dirs[0..i])
-      if not File.directory?(dirp) then
-        Dir.mkdir(dirp)
-      end
-    end
+    FileUtils.mkdir_p(File.dirname(output))
     # Download file.
     File.open(output, "w") do |outputfile|
-      uri = URI.parse("https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/#{url}")
+      uri = URI.parse(BASE_URI + url)
       request = Net::HTTP.new(uri.host, uri.port)
       request.use_ssl = true
       request.start do
