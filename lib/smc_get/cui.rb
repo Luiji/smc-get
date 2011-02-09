@@ -86,7 +86,7 @@ EOF
     #Starts executing of the CUI. This method never returns, it
     #calls #exit after the command has finished.
     def start
-      ret = send(:"execute_#{@config[:command]}_command", @config[:args])
+      ret = send(:"execute_#{@config[:command]}_command")
       #If numbers are returned they are supposed to be the exit code.
       if ret.kind_of? Integer
         exit ret
@@ -192,12 +192,12 @@ EOF
       @config[:getinfo][:package] = args.shift
     end
     
-    def execute_help_command(args)
+    def execute_help_command
       puts HELP_MESSAGE
       exit
     end
     
-    def execute_install_command(args)
+    def execute_install_command
       pkg = @config[:install][:package]
       if @smc_get.package_installed?(pkg)
         if @config[:install][:reinstall]
@@ -218,7 +218,7 @@ EOF
       puts
     end
     
-    def execute_uninstall_command(args)
+    def execute_uninstall_command
       pkg = @config[:uninstall][:package]
       unless @smc_get.package_installed?(pkg)
         $stderr.puts("Package not installed: #{pkg}.")
@@ -234,7 +234,7 @@ EOF
       end
     end
     
-    def execute_getinfo_command(args)
+    def execute_getinfo_command
       pkg = @config[:getinfo][:package]
       #Get the information
       info = if @smc_get.package_installed?(pkg)
