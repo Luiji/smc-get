@@ -1,15 +1,28 @@
 = SMC-GET -- level repository manager for Secret Maryo Chronicles
 smc-get - Library and command-line for managing SMC level packages.
 
-Author::    Luiji Maryo (mailto:luiji@users.sourceforge.net)
-Copyright:: Copyright (C) 2010 Entertaining Software, Inc.
-License::   GNU General Public License (see COPYING)
+Author::      Luiji Maryo (mailto:luiji@users.sourceforge.net)
+Contributor:: Quintus (mailto:sutniuq@gmx.net)
+Copyright::   Copyright (C) 2010 Entertaining Software, Inc.
+License::     GNU General Public License (see COPYING)
 
-= Synopsis
- require 'smc-get'
- smcget = SmcGet.new
- smcget.install 'mypackage'
- smcget.uninstall 'mypackage'
+= Synopsis for use as a command-line tool
+  smc-get install mypackage
+  smc-get uninstall mypackage
+  smc-get help
+
+= Synopsis for use as a library
+  require 'smc_get'
+  #Set Luiji's contributed level directory as the source
+  SmcGet.repo_url = "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/"
+  #Indicate your SMC installation path
+  SmcGet.datadir = "/usr/local/share/smc"
+  #Get a package
+  pkg = SmcGet::Package.new("mypackage")
+  #Install it!
+  pkg.install
+  #...or remove it.
+  pkg.uninstall
 
 = Description
 smc-get is a library and command-line tool for installing, uninstalling, etc.
@@ -46,24 +59,53 @@ To get help on the various commands, use the help command.
 smc-get, although mainly targetted at being a command-line utility, may also be
 used as a library.  This is useful when, for instance, creating a GUI front-end.
 
-To initialize the library, create an instance of the SmcGet type.
- smcget = SmcGet.new
+To initialize the library, indicate which repository you are using and
+where you want smc-get to install the packages to (which is usually your
+SMC installation path)
+  SmcGet.repo_url = "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/"
+  SmcGet.datadir = "/usr/local/share/smc"
 
-It will automatically load the smc-get.yml configuration file.  To change what
-configuration file it should load, specify it when initializing.
- smcget = SmcGet.new('config.yml')
-
-Then just use its commands in a similar way to how you would if it were a
-command-line.
- smcget.install 'mypackage'
+For interacting with the SMC repository, smc-get exposes an object-oriented API
+centered around the SmcGet::Package class. After you initialized the library
+as explained above, you can query, install and uninstall packages.
+  pkg = SmcGet::Package.new("mypackage")
+  pkg.install
 
 If the function fails, it will raise various exceptions.  When creating a GUI,
 you should catch these exceptions and present them as message boxes.
  begin
-   smcget.install 'mypackage'
- rescue SmcGet::NoSuchPackageError
+   Package.new("mypackage").install
+ rescue SmcGet::Errors::NoSuchPackageError
    alert 'No such package "mypackage"!'
  end
+
+All errors smc-get raises are subclasses of SmcGet::Errors::SmcGetError. That
+means, if you rescue from this exception, you can handle all package-related
+errors at once:
+  begin
+    Package.new("mypackage").install
+  rescue SmcGet::Errors::SmcGetError => e
+    alert e.message
+  end
+
+Furhtermore, these error messages should have a pretty informative message set,
+so unless you want to localize the error messages you can just reach them
+through (the messages, not the whole exceptions, of course).
+
+The configuration file only contains settings for the commandline user
+interface, so you don't need it here. If you want to use the CUI from
+your scripts, do
+  require "smc_get"
+  require "smc_get/cui"
+  
+  cui = SmcGet::CUI.new(ARGV)
+  cui.start
+The configuration file from the <b>config/</b> directory will automatically
+be loaded, you may specify another configuration file by placing the
+appropriate option in ARGV:
+  ARGV.unshift("-c YOURCONFIGFILE.yml")
+  cui = SmcGet::CUI.new(ARGV)
+  cui.start
 
 = License
 
