@@ -90,12 +90,23 @@ EOF
     #Starts executing of the CUI. This method never returns, it
     #calls #exit after the command has finished.
     def start
-      ret = send(:"execute_#{@config[:command]}_command")
-      #If numbers are returned they are supposed to be the exit code.
-      if ret.kind_of? Integer
-        exit ret
-      else
-        exit
+      begin
+        ret = send(:"execute_#{@config[:command]}_command")
+        #If numbers are returned they are supposed to be the exit code.
+        if ret.kind_of? Integer
+          exit ret
+        else
+          exit
+        end
+      rescue Errors::SmcGetError => e
+        $stderr.puts(e.message) #All SmcGetErrors should have an informative message
+        exit 2
+      rescue => e #Ouch. Fatal error not intended.
+        $stderr.puts("[BUG] #{e.class}")
+        $stderr.puts("Please file a bug report at https://github.com/Luiji/smc-get/issues")
+        $stderr.puts("and attach this message. Describe what you did so we can")
+        $stderr.puts("reproduce it. ")
+        raise #Bubble up
       end
     end
     
@@ -224,7 +235,6 @@ EOF
     
     def execute_help_command
       puts HELP_MESSAGE
-      exit
     end
     
     def execute_install_command
@@ -250,10 +260,6 @@ EOF
     
     def execute_uninstall_command
       pkg = @config[:uninstall][:package]
-      unless @smc_get.package_installed?(pkg)
-        $stderr.puts("Package not installed: #{pkg}.")
-        return 1
-      end
       puts "Uninstalling #{pkg}."
       #Windows doesn't understand ANSI escape sequences, so we have to
       #use the carriage return and reprint the whole line.
