@@ -58,6 +58,7 @@ module SmcGet
           yield(percent_total, file, percent_done) if block_given?
         end
       rescue Errors::DownloadFailedError
+        File.delete(@datadir + PACKAGE_SPECS_DIR + "#{package_name}.yml") #There is an empty file otherwise
         raise(Errors::NoSuchPackageError.new(package_name), "ERROR: Package not found in the repository: #{package_name}.")
       end
       
