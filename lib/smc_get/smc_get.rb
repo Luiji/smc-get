@@ -64,7 +64,7 @@ module SmcGet
     
     # Download the specified raw file from the repository to the specified
     # output file.  URL should be everything in the URL after
-    # https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/.
+    # SmcGet.repo_url.
     # Yields the currently downloaded file and how many percent of that file have
     # already been downloaded if a block is given.
     def download(url, output) # :nodoc:

@@ -136,6 +136,8 @@ module SmcGet
       File.delete(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@package_name}.yml")
     end
     
+    #Returns true if the package is installed locally. Returns false
+    #otherwise.
     def installed?
       SmcGet.datadir.join(PACKAGE_SPECS_DIR, "#{@package_name}.yml").file?
     end
