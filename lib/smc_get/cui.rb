@@ -42,13 +42,13 @@ module SmcGet
     class InvalidCommandline < Errors::SmcGetError
     end
     
-    #Location of the configuration file.
-    CONFIG_FILE = CONFIG_DIR + "smc-get.yml"
+    #Default location of the configuration file.
+    DEFAULT_CONFIG_FILE = CONFIG_DIR + "smc-get.yml"
     
     #The help message displayed to the user when issueing "help".
     HELP_MESSAGE =<<EOF
 USAGE:
-#{$0} COMMAND [PARAMETERS...]
+#{$0} [OPTIONS] COMMAND [PARAMETERS...]
 
 DESCRIPTION:
 Install and uninstall levels from the Secret Maryo Chronicles contributed level repository.
@@ -59,10 +59,14 @@ COMMANDS:
   getinfo\tget information about a package
   help\t\tprint this help message
 
-OPTIONS FOR install
+OPTIONS FOR #$0 ITSELF
+  -c FILE\t--config-file FILE\tLoads FILE instead of the default configuration
+  \t\t\t\t  file 'config/smc-get.yml'.
+
+PARAMETERS FOR install
   -r\t--reinstall\tForces a reinstallation of the package.
 
-OPTIONS FOR getinfo
+PARAMETERS FOR getinfo
   -r\t--remote\tForces getinfo to do a remote lookup.
 
 The default behaviour is to do a local lookup if the
@@ -107,8 +111,27 @@ EOF
     #easily extendable by adding another parse_*_command
     #method (it will automatically be found by this method).
     def parse_commandline(argv)
+      
+      #Get options for smc-get itself, rather than it's subcommands.
+      #First, define the default behaviour:
+      @config_file = DEFAULT_CONFIG_FILE
+      #Now, check for updates:
+      while !argv.empty? and argv.first.start_with?("-") #All options start with a hyphen, commands cannot
+        arg = argv.shift
+        case arg
+        #-c CONFIG | --config-file CONFIG
+        when "-c", "--config-file" then @config_file = Pathname.new(argv.shift)
+        else
+          $stderr.puts("Invalid option #{arg}.")
+          $stderr.puts("Try #$0 help.")
+          exit 1
+        end
+      end
+      
+      #If nothing is left, the command was left out. Assume 'help'.
       argv << "help" if argv.empty?
       
+      #Now parse the subcommand.
       command = argv.shift.to_sym
       sym = :"parse_#{command}_command"
       if respond_to?(sym, true) #Private method
@@ -142,8 +165,15 @@ EOF
     end
     
     def load_config_file
+      #Check for existance of the configuration file and use the
+      #default if it doesn't exist.
+      unless @config_file.file?
+        $stderr.puts("Configuration file #@config_file not found.")
+        $stderr.puts("Falling back to the default configuration file.")
+        @config_file = DEFAULT_CONFIG_FILE
+      end
       #Load the config file and turn it's keys to symbols
-      hsh = Hash[YAML.load_file(CONFIG_FILE.to_s).map{|k, v| [k.to_sym, v]}]
+      hsh = Hash[YAML.load_file(@config_file.to_s).map{|k, v| [k.to_sym, v]}]
       @config.merge!(hsh){|key, old_val, new_val| old_val} #Command-line args overwrite those in the config
     end
     
