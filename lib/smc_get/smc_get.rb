@@ -70,7 +70,7 @@ module SmcGet
     def download(url, output) # :nodoc:
       Errors::LibraryNotInitialized.throw_if_needed!
       # Make url friendly.
-      url = URI.escape(url)
+      url = URI::Parser.new.escape(url)
       # Create directories if needed.
       FileUtils.mkdir_p(File.dirname(output))
       # Download file.
