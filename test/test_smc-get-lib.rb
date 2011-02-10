@@ -42,7 +42,8 @@ CONFIG
   def setup
     FileUtils.mkdir_p(TEST_DIR)
     File.open(TEST_CONFIG_FILE, "w"){|f| f.write(TEST_CONFIG)}
-    @smc_get = SmcGet::SmcGet.new(TEST_REPO, TEST_DIR)
+    SmcGet.repo_url = TEST_REPO
+    SmcGet.datadir = TEST_DIR
   end
   
   #Cleanup afterwards. Delete our testing directory. Run after EACH test.
@@ -54,12 +55,12 @@ CONFIG
   def test_install
     TEST_PACKAGES.each do |pkg|
       puts "Test installing #{pkg}"
-      @smc_get.install(pkg)
-    
-      pkg_config_file = File.join(TEST_PACKAGES_DIR, "#{pkg}.yml")
-      assert(File.file?(pkg_config_file), "Package config file for #{pkg} not found.")
+      package = SmcGet::Package.new(pkg)
+      package.install
+          
+      assert(package.spec_file.file?, "Package config file for #{pkg} not found.")
       
-      pkg_config = YAML.load_file(pkg_config_file)
+      pkg_config = YAML.load_file(package.spec_file.to_s)
       
       Dir.chdir(TEST_DIR) do
         [%w[levels levels], %w[music music/contrib-music], %w[graphics pixmaps/contrib-graphics]].each do |part, dir|
@@ -72,7 +73,7 @@ CONFIG
     end
     
     TEST_INVALID_PACKAGES.each do |pkg|
-      assert_raises(SmcGet::Errors::NoSuchPackageError){@smc_get.install(pkg)}
+      assert_raises(SmcGet::Errors::NoSuchPackageError){SmcGet::Package.new(pkg).install}
     end
   end
   
@@ -83,14 +84,14 @@ CONFIG
   def test_uninstall
     TEST_PACKAGES.each do |pkg|
       puts "Test uninstalling #{pkg}"
-      @smc_get.install(pkg) #We can't uninstall a package that is not installed
+      package = SmcGet::Package.new(pkg)
+      package.install #We can't uninstall a package that is not installed
+            
+      pkg_config = YAML.load_file(package.spec_file)
   
-      pkg_config_file = File.join(TEST_PACKAGES_DIR, "#{pkg}.yml")
-      pkg_config = YAML.load_file(pkg_config_file)
-  
-      @smc_get.uninstall(pkg)
-      assert(!File.exists?(pkg_config_file), "File found after uninstalling: #{pkg_config_file}.")
-  
+      package.uninstall
+      assert(!package.spec_file.exist?, "File found after uninstalling: #{package.spec_file}.")
+      
       Dir.chdir(TEST_DIR) do
         [%w[levels levels], %w[music music/contrib-music], %w[graphics pixmaps/contrib-graphics]].each do |part, dir|
           next unless pkg_config.has_key?(part)
@@ -102,23 +103,23 @@ CONFIG
     end
   
     TEST_INVALID_PACKAGES.each do |pkg|
-      assert_raises(SmcGet::Errors::NoSuchPackageError){@smc_get.uninstall(pkg)}
+      assert_raises(SmcGet::Errors::NoSuchPackageError){SmcGet::Package.new(pkg).uninstall}
     end
   end
   
   def test_getinfo
     TEST_PACKAGES.each do |pkg|
       puts "Test getting info about #{pkg}"
-      @smc_get.install(pkg) #We can't check specs from packages not installed
+      package = SmcGet::Package.new(pkg)
+      package.install #We can't check specs from packages not installed
+        
+      pkg_config = YAML.load_file(package.spec_file)
   
-      pkg_config_file = File.join(TEST_PACKAGES_DIR, "#{pkg}.yml")
-      pkg_config = YAML.load_file(pkg_config_file)
-  
-      assert_equal(pkg_config, @smc_get.getinfo(pkg))
+      assert_equal(pkg_config, package.getinfo)
     end
   
     TEST_INVALID_PACKAGES.each do |pkg|
-      assert_raises(SmcGet::Errors::NoSuchPackageError){@smc_get.getinfo(pkg)}
+      assert_raises(SmcGet::Errors::NoSuchPackageError){SmcGet::Package.new(pkg).getinfo}
     end
   end
   

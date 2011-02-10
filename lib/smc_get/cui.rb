@@ -84,7 +84,8 @@ EOF
       @config = {}
       parse_commandline(argv)
       load_config_file
-      @smc_get = SmcGet.new(@config[:repo_url], @config[:data_directory])
+      SmcGet.repo_url = @config[:repo_url]
+      SmcGet.datadir = @config[:data_directory]
     end
     
     #Starts executing of the CUI. This method never returns, it
@@ -238,8 +239,8 @@ EOF
     end
     
     def execute_install_command
-      pkg = @config[:install][:package]
-      if @smc_get.package_installed?(pkg)
+      pkg = SmcGet::Package.new(@config[:install][:package])
+      if pkg.installed?
         if @config[:install][:reinstall]
           puts "Reinstalling #{pkg}."
         else
@@ -251,7 +252,7 @@ EOF
       #Windows doesn't understand ANSI escape sequences, so we have to
       #use the carriage return and reprint the whole line.
       base_str = "\r[%.2f%%] Downloading %s... (%.2f%%)"
-      @smc_get.install(pkg) do |percent_total, filename, percent_filename|
+      pkg.install do |percent_total, filename, percent_filename|
         print "\r", " " * 80 #Clear everything written before
         printf(base_str, percent_total, filename, percent_filename)
       end
@@ -259,28 +260,28 @@ EOF
     end
     
     def execute_uninstall_command
-      pkg = @config[:uninstall][:package]
+      pkg = SmcGet::Package.new(@config[:uninstall][:package])
       puts "Uninstalling #{pkg}."
       #Windows doesn't understand ANSI escape sequences, so we have to
       #use the carriage return and reprint the whole line.
       base_str = "\r[%.2f%%] Removing %s... (%.2f%%)"
-      @smc_get.uninstall(pkg) do |percent_total, part, percent_part|
+      pkg.uninstall do |percent_total, part, percent_part|
         print "\r", " " * 80 #Clear everything written before
         printf(base_str, percent_total, part, percent_part)
       end
     end
     
     def execute_getinfo_command
-      pkg = @config[:getinfo][:package]
+      pkg = SmcGet::Package.new(@config[:getinfo][:package])
       #Get the information
-      info = if @smc_get.package_installed?(pkg)
+      info = if pkg.installed?
         if @config[:getinfo][:force_remote]
-          @smc_get.getinfo(pkg, true)
+          pkg.getinfo(true)
         else
-          @smc_get.getinfo(pkg)
+          pkg.getinfo
         end
       else
-        @smc_get.getinfo(pkg)
+        pkg.getinfo
       end
       #Now output the information
       puts "Title: #{info['title']}"

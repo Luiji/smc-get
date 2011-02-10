@@ -9,6 +9,19 @@ module SmcGet
     class SmcGetError < StandardError
     end
     
+    #Raises when you did not call SmcGet.datadir= and SmcGet.repo_url=.
+    class LibraryNotInitialized < SmcGetError
+      
+      #Throws an exception of this class with an appropriate error
+      #message if smc-get has not been initialized correctly.
+      def self.throw_if_needed!
+        if SmcGet.datadir.nil? or SmcGet.repo_url.nil?
+          raise(self, "You have to setup smc-get first!")
+        end
+      end
+      
+    end
+    
     # Raised when the class is initialized with a non-existant settings file.
     class CannotFindSettings < SmcGetError
       # The path to the settings file that was specified.
