@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+#Encoding: UTF-8
+
+if RUBY_VERSION =~ /^1.8/ #1.8 doesn't have require_relative
+  require File.join(File.expand_path(File.dirname(__FILE__)), "..", "lib", "smc_get", "smc_get")
+  require File.join(File.expand_path(File.dirname(__FILE__)), "..", "lib", "smc_get", "cui")
+else
+  require_relative "../lib/smc_get/smc_get"
+  require_relative "../lib/smc_get/cui"
+end
+
+cui = SmcGet::CUI.new(ARGV)
+cui.start

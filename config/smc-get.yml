@@ -1,0 +1,20 @@
+#Encoding: UTF-8
+#This is the configuration file for smc-get.
+---
+#This is the directory where everything gets installed into.
+#Set this to the installation directory of SMC, e.g.
+#/usr/share/smc.
+#data_directory: "/usr/share/smc"
+data_directory: "testdir"
+#This is the URL of the repository where packages are downloaded from.
+repo_url: "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/"
+
+#Following you may specify default options for commands. The main key is the
+#name of the command, the nested key the option you want to
+#set and the value is the option's value. Check the
+#documentation for possible option values.
+#This is EXPERIMENTAL.
+#Example (force to always reinstall on "install"):
+#
+#install:
+#  reinstall: true
