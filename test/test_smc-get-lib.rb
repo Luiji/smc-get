@@ -37,6 +37,9 @@ CONFIG
   #To test wheather smc-get does know what to do in case of non-existing packages.
   TEST_INVALID_PACKAGES = %w[sdhrfg jhjjjj]
   
+  TEST_SEARCH_TERMS = ["icy", /icy/]
+  TEST_SEARCH_TERMS_NOT_FOUND = ["dfgd", /^nonexistant$/]
+  
   #Test initialization. Write the config file and ensure the directory we
   #want to download into is available. Run before EACH test.
   def setup
@@ -75,6 +78,7 @@ CONFIG
     TEST_INVALID_PACKAGES.each do |pkg|
       assert_raises(SmcGet::Errors::NoSuchPackageError){SmcGet::Package.new(pkg).install}
     end
+    assert_equal(0, SmcGet::Package.installed_packages.count)
   end
   
   #def test_incorrect_install
@@ -120,6 +124,27 @@ CONFIG
   
     TEST_INVALID_PACKAGES.each do |pkg|
       assert_raises(SmcGet::Errors::NoSuchPackageError){SmcGet::Package.new(pkg).getinfo}
+    end
+  end
+  
+  def test_search
+    TEST_SEARCH_TERMS.each do |query|
+      ary = SmcGet::Package.search(query)
+      pkg = SmcGet::Package.new(ary[0][0])
+      assert_not_equal(0, ary.size)
+      
+      pkg.install
+      
+      ary = SmcGet::Package.search(query, [:title], true)
+      assert_not_equal(0, ary.size)
+      
+      pkg.uninstall
+      
+      ary = SmcGet::Package.search(query, [:title], true)
+      assert_equal(0, ary.size)
+    end
+    TEST_SEARCH_TERMS_NOT_FOUND.each do |query|
+      assert_equal(0, SmcGet::Package.search(query))
     end
   end
   

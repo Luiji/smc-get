@@ -21,6 +21,88 @@ module SmcGet
     #The name of this package.
     attr_reader :name
     
+    class << self
+      
+      #Searches through the package repostitory and returns an array
+      #of matching package specifications as follows:
+      #  [[package_name, package_spec_hsh]]
+      #where the +package_spec_hsh+ is just the YAML-parsed package
+      #specification.
+      #
+      #Pass in the regular expression to search for (or a string, which
+      #then is treated as a regular expression without anchors), the
+      #keys of the specification to search through as an array of symbols,
+      #and wheather you want to query only locally installed packages (by
+      #default, only remote packages are searched).
+      #
+      #Note that it's a bad idea to not search for :title, because in remote
+      #mode (i.e. <tt>only_local == false</t>, the default setting) smc-get
+      #needs to download the package specifications for each and every
+      #package in the repository then, which can take quite a long time.
+      #With :title, just the specifications for the packages whose titles
+      #match +regexp+ are downloaded.
+      def search(regexp, query_fields = [:title, :description], only_local = false)
+        regexp = Regexp.new(Regexp.escape(regexp)) if regexp.kind_of? String
+        ary = []
+        
+        list = if only_local
+          Errors::LibraryNotInitialized.throw_if_needed!
+          installed_packages.map(&:name)
+        else
+          Tempfile.open("smc-get") do |listfile|
+            SmcGet.download(PACKAGE_LIST_FILE, listfile.path)
+            listfile.readlines.map(&:chomp)
+          end
+        end
+        #TODO: Package name and title are not identical
+        if query_fields.include?(:title)
+          list.grep(regexp).each do |result|
+            search_pkg_spec(result, regexp, query_fields){|spec| ary << [result, spec]}
+          end
+        else #In case of remote lookup, whe have to download ALL specs then...
+          list.each do |result|
+            search_pkg_spec(result, regexp, query_fields){|spec| ary << [result, spec]}
+          end
+        end
+        ary
+      end
+      
+      #Returns a list of all currently installed packages as an array of
+      #Package objects.
+      def installed_packages
+        Errors::LibraryNotInitialized.throw_if_needed!
+        specs_dir = SmcGet.datadir + PACKAGE_SPECS_DIR
+        specs_dir.mkpath unless specs_dir.directory?
+        
+        #We need to chdir here, because Dir.glob returns the path
+        #relative to the current working directory and it should be
+        #a bit more performant if I don't have to strip off the relative
+        #prefix of the filenames (which are the names of the packages + .yml).
+        Dir.chdir(specs_dir.to_s) do
+          Dir.glob("*.yml").map{|filename| new(filename.match(/\.yml$/).pre_match)}
+        end
+      end
+      
+      private
+      
+      #Downloads the specification for the package +pkg_name+ and
+      #searches through it by matching all keys found in +query_fields+
+      #against +regexp+. Matching package specifications are yielded.
+      def search_pkg_spec(pkg_name, regexp, query_fields)
+        Tempfile.open("smc-get") do |file|
+          SmcGet.download("packages/#{pkg_name}.yml", file.path)
+          hsh = YAML.load(file.read)
+          
+          query_fields.each do |field|
+            if hsh[field.to_s] =~ regexp ##to_s, because the spec uses strings, not symbols
+              yield(hsh)
+            end
+          end
+        end
+      end
+      
+    end
+    
     #Creates a new package object from it's name. This doesn't do anything,
     #especially it doesn't install the package. It just creates an object for
     #you you can use to inspect or install pacakges. It doesn't even check if

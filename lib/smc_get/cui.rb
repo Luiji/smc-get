@@ -222,6 +222,7 @@ EOF
     end
     
     def parse_getinfo_command(args)
+      raise(InvalidCommandline, "No package given.") if args.empty?
       while args.count > 1
         arg = args.shift
         case arg
@@ -232,6 +233,28 @@ EOF
       end
       #The last command-line arg is the package
       @config[:getinfo][:package] = args.shift
+    end
+    
+    def parse_search_command(args)
+      raise(InvalidCommandline, "No query given.") if args.empty?
+      @config[:search][:fields] = []
+      while args.count > 1
+        arg = args.shift
+        case arg
+        when "-l", "--only-local" then @config[:search][:only_local] = true
+        when "-t", "--title" then @config[:search][:fields] << :title
+        when "-d", "--description" then @config[:search][:fields] << :description
+        when "-a", "--authors" then @config[:search][:fields] << :authors
+        when "-D", "--difficulty" then @config[:search][:fields] << :difficulty
+        when "-l", "--levels" then @config[:search][:fields] << :levels
+        else
+          raise(InvalidCommandline, "Invalid argument #{arg}.")
+        end
+      end
+      #If no search fields were specified, default to :title.
+      @config[:search][:fields] << :title if @config[:search][:fields].empty?
+      #The last command-line arg is the search query
+      @config[:search][:query] = Regexp.new(args.shift)
     end
     
     def execute_help_command
@@ -295,6 +318,19 @@ EOF
       end
       puts "Difficulty: #{info['difficulty']}"
       puts "Description: #{info['description']}"
+    end
+    
+    def execute_search_command
+      SmcGet::Package.search(@config[:search][:query], @config[:search][:fields], @config[:search][:only_local]).each do |pkgname, spec|
+        puts spec["title"]
+        puts "-" * spec["title"].length
+        puts "From package: #{pkgname}"
+        puts "Authors: #{spec["authors"].join(",")}"
+        puts "Difficulty: #{spec["difficulty"]}"
+        puts "Description:"
+        puts spec["description"]
+        puts
+      end
     end
     
   end
