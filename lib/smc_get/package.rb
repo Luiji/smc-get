@@ -18,6 +18,8 @@ module SmcGet
     #The package specification file for this packages. This file may not
     #exist if the package is not installed. This is a Pathname object.
     attr_reader :spec_file
+    #The name of this package.
+    attr_reader :name
     
     #Creates a new package object from it's name. This doesn't do anything,
     #especially it doesn't install the package. It just creates an object for
@@ -25,8 +27,8 @@ module SmcGet
     #the package name is valid.
     def initialize(package_name)
       Errors::LibraryNotInitialized.throw_if_needed!
-      @package_name = package_name
-      @spec_file = SmcGet.datadir.join(PACKAGE_SPECS_DIR, "#{@package_name}.yml")
+      @name = package_name
+      @spec_file = SmcGet.datadir.join(PACKAGE_SPECS_DIR, "#{@name}.yml")
     end
     
     # Install a package from the repository. Yields the total progress in percent,
@@ -36,17 +38,17 @@ module SmcGet
       percent_total = 0 #For reporting the total progress
       begin
         SmcGet.download(
-        "packages/#{@package_name}.yml",
-        SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@package_name}.yml"
+        "packages/#{@name}.yml",
+        SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml"
         ) do |file, percent_done|
           yield(percent_total, file, percent_done) if block_given?
         end
       rescue Errors::DownloadFailedError
-        File.delete(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@package_name}.yml") #There is an empty file otherwise
-        raise(Errors::NoSuchPackageError.new(@package_name), "ERROR: Package not found in the repository: #{@package_name}.")
+        File.delete(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml") #There is an empty file otherwise
+        raise(Errors::NoSuchPackageError.new(@name), "ERROR: Package not found in the repository: #{@name}.")
       end
       
-      pkgdata = YAML.load_file(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@package_name}.yml")
+      pkgdata = YAML.load_file(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml")
       percent_total = 25 #%
       
       if pkgdata.has_key?('music')
@@ -108,9 +110,9 @@ module SmcGet
     # part.
     def uninstall
       begin
-        pkgdata = YAML.load_file(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@package_name}.yml")
+        pkgdata = YAML.load_file(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml")
       rescue Errno::ENOENT
-        raise(Errors::NoSuchPackageError.new(@package_name), "ERROR: Local package not found: #{@package_name}.")
+        raise(Errors::NoSuchPackageError.new(@name), "ERROR: Local package not found: #{@name}.")
       end
       
       percent_total = 0 #For reporting the total progress
@@ -133,13 +135,13 @@ module SmcGet
         percent_total = ((part_index + 1) / 3.0) * 100 #+1, because index is 0-based (3 is the total number of iterations)
       end
       
-      File.delete(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@package_name}.yml")
+      File.delete(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml")
     end
     
     #Returns true if the package is installed locally. Returns false
     #otherwise.
     def installed?
-      SmcGet.datadir.join(PACKAGE_SPECS_DIR, "#{@package_name}.yml").file?
+      SmcGet.datadir.join(PACKAGE_SPECS_DIR, "#{@name}.yml").file?
     end
     
     # Get package information.  WARNING: This function is not thread-safe.
@@ -148,27 +150,27 @@ module SmcGet
       if force_remote or !installed?
         Tempfile.open('pkgdata') do |tmp|
           begin
-            SmcGet.download("packages/#{@package_name}.yml", tmp.path)
+            SmcGet.download("packages/#{@name}.yml", tmp.path)
           rescue Errors::DownloadFailedError
-            raise(Errors::NoSuchPackageError.new(@package_name), "ERROR: Package not found in the repository: #{@package_name}")
+            raise(Errors::NoSuchPackageError.new(@name), "ERROR: Package not found in the repository: #{@name}")
           end
           yaml = YAML.load_file(tmp.path)
         end
       else
-        yaml = YAML.load_file(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@package_name}.yml")
+        yaml = YAML.load_file(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml")
       end
       return yaml
     end
     
     #Returns the name of the package.
     def to_s
-      @package_name
+      @name
     end
     
     #Human-readable description of form
     #  #<SmcGet::Package package_name (installation_status)>
     def inspect
-      "#<#{self.class} #{@package_name} (#{installed? ? 'installed' : 'not installed'})>"
+      "#<#{self.class} #{@name} (#{installed? ? 'installed' : 'not installed'})>"
     end
     
   end
