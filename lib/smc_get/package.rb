@@ -21,6 +21,78 @@ module SmcGet
     #The name of this package.
     attr_reader :name
     
+    class << self
+      
+      #Searches through the package repostitory and returns an array
+      #of matching package objects.
+      #
+      #Pass in the regular expression to search for (or a string, which
+      #then is treated as a regular expression without anchors), the
+      #keys of the specification to search through as an array of symbols,
+      #and wheather you want to query only locally installed packages (by
+      #default, only remote packages are searched).+query_fields+ indicates
+      #which fields of the package specification shall be searched. You can
+      #pass them as an array of symbols. +only_local+ causes smc-get to
+      #do a local search instead of a remote one.
+      #
+      #With solely :pkgname specified, just the specifications for the packages
+      #whose package file names match +regexp+ are downloaded, causing a
+      #massive speedup.
+      def search(regexp, query_fields = [:pkgname], only_local = false)
+        regexp = Regexp.new(Regexp.escape(regexp)) if regexp.kind_of? String
+        ary = []
+      
+        list = if only_local
+          Errors::LibraryNotInitialized.throw_if_needed!
+          installed_packages.map(&:name)
+        else
+          Tempfile.open("smc-get") do |listfile|
+            SmcGet.download(PACKAGE_LIST_FILE, listfile.path)
+            listfile.readlines.map(&:chomp)
+          end
+        end
+      
+        list.each do |pkg_name|
+          pkg = Package.new(pkg_name)
+          #If the user wants to query just the pkgname, we can save
+          #much time by not downloading all the package specs.
+          if query_fields == [:pkgname]
+            ary << pkg if pkg_name =~ regexp
+          else
+            spec = only_local ? pkg.spec : pkg.getinfo
+            query_fields.each do |field|
+              if field == :pkgname #This field is not _inside_ the spec.
+                ary << pkg if pkg_name =~ regexp
+              else
+                #First to_s: Convert Symbol to string used in the specs.
+                #Second to_s: Ensure array values such as "author" are
+                #             handled correctly.
+                ary << pkg if spec[field.to_s].to_s =~ regexp
+              end
+            end
+          end
+        end
+        ary
+      end
+      
+      #Returns a list of all currently installed packages as an array of
+      #Package objects.
+      def installed_packages
+        Errors::LibraryNotInitialized.throw_if_needed!
+        specs_dir = SmcGet.datadir + PACKAGE_SPECS_DIR
+        specs_dir.mkpath unless specs_dir.directory?
+        
+        #We need to chdir here, because Dir.glob returns the path
+        #relative to the current working directory and it should be
+        #a bit more performant if I don't have to strip off the relative
+        #prefix of the filenames (which are the names of the packages + .yml).
+        Dir.chdir(specs_dir.to_s) do
+          Dir.glob("*.yml").map{|filename| new(filename.match(/\.yml$/).pre_match)}
+        end
+      end
+      
+    end
+    
     #Creates a new package object from it's name. This doesn't do anything,
     #especially it doesn't install the package. It just creates an object for
     #you you can use to inspect or install pacakges. It doesn't even check if
@@ -160,6 +232,14 @@ module SmcGet
         yaml = YAML.load_file(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml")
       end
       return yaml
+    end
+    
+    def spec
+      if installed?
+        YAML.load_file(@spec_file)
+      else
+        raise(Errors::NoSuchPackageError, "ERROR: Package not installed locally: #@name.")
+      end
     end
     
     #Returns the name of the package.

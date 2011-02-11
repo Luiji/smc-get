@@ -40,6 +40,9 @@ module SmcGet
   #Directory where a package's level files are saved to. Relative to the
   #data directory given in SmcGet.datadir.
   PACKAGE_LEVELS_DIR = "levels".freeze
+  #The name of the file containing the list of all levels in the
+  #repository.
+  PACKAGE_LIST_FILE = "#{PACKAGE_SPECS_DIR}/packages.lst".freeze
   
   class << self
     
