@@ -2,7 +2,7 @@
 smc-get - Library and command-line for managing SMC level packages.
 
 Author::    Luiji Maryo (mailto:luiji@users.sourceforge.net)
-Copyright:: Copyright (C) 2010 Entertaining Software, Inc.
+Copyright:: Copyright (C) 2011 Entertaining Software, Inc.
 License::   GNU General Public License (see COPYING)
 
 = Synopsis

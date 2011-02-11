@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
-# smc-get: level repository manager for Secret Maryo Chronicles
-# Copyright(C) 2010 Entertaining Software, Inc.
+################################################################################
+# This file is part of smc-get.
+# Copyright (C) 2010-2011 Entertaining Software, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+################################################################################
 
 require 'tempfile'
 require 'yaml'
