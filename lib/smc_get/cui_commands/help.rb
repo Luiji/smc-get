@@ -17,15 +17,42 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
-#
-#This is the configuration file for smc-get.
----
-#This is the directory where everything gets installed into.
-#Set this to the installation directory of SMC, e.g.
-#/usr/share/smc.
-#data_directory: "/usr/share/smc"
-data_directory: "testdir"
-#This is the URL of the repository where packages are downloaded from.
-repo_url: "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/"
 
+module SmcGet
+  
+  module CUICommands
+    
+    class HelpCommand < Command
+      
+      def self.help
+        <<EOF
+USAGE: #$0 help [SUBCOMMAND]
 
+Shows help for a special SUBCOMMAND or for smc-get in general.
+EOF
+      end
+      
+      def parse(args)
+        raise(InvalidCommandline, "Too many arguments.") if args.count > 1
+        @command = args.shift #nil if not given
+      end
+      
+      def execute
+        if @command
+          sym = :"#{@command.capitalize}Command"
+          if CUICommands.const_defined?(sym)
+            puts CUICommands.const_get(sym).help
+          else
+            puts "#{@command} is not a valid command."
+            return 2
+          end
+        else
+          puts CUI::GENERAL_HELP
+        end
+      end
+      
+    end
+    
+  end
+  
+end

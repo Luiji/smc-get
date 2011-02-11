@@ -17,15 +17,31 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
-#
-#This is the configuration file for smc-get.
----
-#This is the directory where everything gets installed into.
-#Set this to the installation directory of SMC, e.g.
-#/usr/share/smc.
-#data_directory: "/usr/share/smc"
-data_directory: "testdir"
-#This is the URL of the repository where packages are downloaded from.
-repo_url: "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/"
 
-
+module SmcGet
+  
+  module CUICommands
+    
+    class Command
+      
+      def self.help
+        ""
+      end
+      
+      def initialize(args)
+        parse(args)
+      end
+      
+      def parse(args)
+        raise(NotImplementedError, "#{__method__} has to be overriden in a subclass!")
+      end
+      
+      def execute
+        raise(NotImplementedError, "#{__method__} has to be overriden in a subclass!")
+      end
+      
+    end
+    
+  end
+  
+end
