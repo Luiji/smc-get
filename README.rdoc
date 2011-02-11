@@ -36,15 +36,6 @@ for anything other then testing.
 
 = Usage
 
-== Configuration file
-smc-get requires a configuration file. By default it searches for
-<tt>smc-get.yml</tt> in the current working directory, but front-ends can change
-this directory (see below).
-
-All the configuration file needs to contain is <tt>data-directory:</tt> followed
-by the path to the Secret Maryo Chronicles data directory (all on the same
-line).
-
 == Using it as a command-line
 smc-get's main purpose is to be used as a command-line utility.  It should be
 executed in the syntax:
@@ -54,6 +45,18 @@ parameters for that command.
 
 To get help on the various commands, use the help command.
  smc-get help
+
+=== Configuration file
+smc-get requires a configuration file when used as a commandline tool.
+By default it searches for <tt>smc-get.yml</tt> in the <b>config/</b>
+subdirectory of your smc-get installation, but front-ends can change
+this directory (see below).
+
+In the configuration file you can set some general options, look into
+the file which is quite self-explanatory. A sample configuration may
+look like this:
+  data_directory: "/usr/local/share/smc"
+  repo_url: "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/"
 
 == Using it as a library
 smc-get, although mainly targetted at being a command-line utility, may also be
