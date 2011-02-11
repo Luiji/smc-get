@@ -24,27 +24,24 @@ module SmcGet
     class << self
       
       #Searches through the package repostitory and returns an array
-      #of matching package specifications as follows:
-      #  [[package_name, package_spec_hsh]]
-      #where the +package_spec_hsh+ is just the YAML-parsed package
-      #specification.
+      #of matching package objects.
       #
       #Pass in the regular expression to search for (or a string, which
       #then is treated as a regular expression without anchors), the
       #keys of the specification to search through as an array of symbols,
       #and wheather you want to query only locally installed packages (by
-      #default, only remote packages are searched).
+      #default, only remote packages are searched).+query_fields+ indicates
+      #which fields of the package specification shall be searched. You can
+      #pass them as an array of symbols. +only_local+ causes smc-get to
+      #do a local search instead of a remote one.
       #
-      #Note that it's a bad idea to not search for :title, because in remote
-      #mode (i.e. <tt>only_local == false</t>, the default setting) smc-get
-      #needs to download the package specifications for each and every
-      #package in the repository then, which can take quite a long time.
-      #With :title, just the specifications for the packages whose titles
-      #match +regexp+ are downloaded.
-      def search(regexp, query_fields = [:title, :description], only_local = false)
+      #With solely :pkgname specified, just the specifications for the packages
+      #whose package file names match +regexp+ are downloaded, causing a
+      #massive speedup.
+      def search(regexp, query_fields = [:pkgname], only_local = false)
         regexp = Regexp.new(Regexp.escape(regexp)) if regexp.kind_of? String
         ary = []
-        
+      
         list = if only_local
           Errors::LibraryNotInitialized.throw_if_needed!
           installed_packages.map(&:name)
@@ -54,14 +51,25 @@ module SmcGet
             listfile.readlines.map(&:chomp)
           end
         end
-        #TODO: Package name and title are not identical
-        if query_fields.include?(:title)
-          list.grep(regexp).each do |result|
-            search_pkg_spec(result, regexp, query_fields){|spec| ary << [result, spec]}
-          end
-        else #In case of remote lookup, whe have to download ALL specs then...
-          list.each do |result|
-            search_pkg_spec(result, regexp, query_fields){|spec| ary << [result, spec]}
+      
+        list.each do |pkg_name|
+          pkg = Package.new(pkg_name)
+          #If the user wants to query just the pkgname, we can save
+          #much time by not downloading all the package specs.
+          if query_fields == [:pkgname]
+            ary << pkg if pkg_name =~ regexp
+          else
+            spec = only_local ? pkg.spec : pkg.getinfo
+            query_fields.each do |field|
+              if field == :pkgname #This field is not _inside_ the spec.
+                ary << pkg if pkg_name =~ regexp
+              else
+                #First to_s: Convert Symbol to string used in the specs.
+                #Second to_s: Ensure array values such as "author" are
+                #             handled correctly.
+                ary << pkg if spec[field.to_s].to_s =~ regexp
+              end
+            end
           end
         end
         ary
@@ -80,24 +88,6 @@ module SmcGet
         #prefix of the filenames (which are the names of the packages + .yml).
         Dir.chdir(specs_dir.to_s) do
           Dir.glob("*.yml").map{|filename| new(filename.match(/\.yml$/).pre_match)}
-        end
-      end
-      
-      private
-      
-      #Downloads the specification for the package +pkg_name+ and
-      #searches through it by matching all keys found in +query_fields+
-      #against +regexp+. Matching package specifications are yielded.
-      def search_pkg_spec(pkg_name, regexp, query_fields)
-        Tempfile.open("smc-get") do |file|
-          SmcGet.download("packages/#{pkg_name}.yml", file.path)
-          hsh = YAML.load(file.read)
-          
-          query_fields.each do |field|
-            if hsh[field.to_s] =~ regexp ##to_s, because the spec uses strings, not symbols
-              yield(hsh)
-            end
-          end
         end
       end
       
@@ -242,6 +232,14 @@ module SmcGet
         yaml = YAML.load_file(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml")
       end
       return yaml
+    end
+    
+    def spec
+      if installed?
+        YAML.load_file(@spec_file)
+      else
+        raise(Errors::NoSuchPackageError, "ERROR: Package not installed locally: #@name.")
+      end
     end
     
     #Returns the name of the package.

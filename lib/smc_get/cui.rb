@@ -51,12 +51,14 @@ USAGE:
 #{$0} [OPTIONS] COMMAND [PARAMETERS...]
 
 DESCRIPTION:
-Install and uninstall levels from the Secret Maryo Chronicles contributed level repository.
+Install and uninstall levels from the Secret Maryo Chronicles contributed level
+repository.
 
 COMMANDS:
   install\tinstall a package
   uninstall\tuninstall a package
   getinfo\tget information about a package
+  search\tsearch for a package
   help\t\tprint this help message
 
 OPTIONS FOR #$0 ITSELF
@@ -68,9 +70,22 @@ PARAMETERS FOR install
 
 PARAMETERS FOR getinfo
   -r\t--remote\tForces getinfo to do a remote lookup.
-
+    
 The default behaviour is to do a local lookup if the
 package is already installed.
+
+PARAMETERS FOR search
+  -a\t--authors\tSearch the author list.
+  -d\t--description\tSearch the package descriptions.
+  -D\t--difficulty\tSearch the 'difficulty' fields.
+  -l\t--only-local\tOnly search local packages. Default is to search remotely.
+  -L\t--levels\tSearch for specific level names.
+  -p\t--pkgname\tSearch the package files' names.
+  -t\t--title\tSearch the packages' full titles.
+  
+  
+If you don't specify which fields to use, --pkgname is assumed as it performs
+best if used alone.
 
 Report bugs to: luiji@users.sourceforge.net
 smc-get home page: <http://www.secretmaryo.org/>
@@ -246,13 +261,15 @@ EOF
         when "-d", "--description" then @config[:search][:fields] << :description
         when "-a", "--authors" then @config[:search][:fields] << :authors
         when "-D", "--difficulty" then @config[:search][:fields] << :difficulty
-        when "-l", "--levels" then @config[:search][:fields] << :levels
+        when "-L", "--levels" then @config[:search][:fields] << :levels
+        when "-p", "--pkgname" then @config[:search][:fields] << :pkgname
         else
           raise(InvalidCommandline, "Invalid argument #{arg}.")
         end
       end
-      #If no search fields were specified, default to :title.
-      @config[:search][:fields] << :title if @config[:search][:fields].empty?
+      #If no search fields were specified, default to :pkgname, because
+      #it causes the least network traffic.
+      @config[:search][:fields] << :pkgname if @config[:search][:fields].empty?
       #The last command-line arg is the search query
       @config[:search][:query] = Regexp.new(args.shift)
     end
@@ -321,12 +338,23 @@ EOF
     end
     
     def execute_search_command
-      SmcGet::Package.search(@config[:search][:query], @config[:search][:fields], @config[:search][:only_local]).each do |pkgname, spec|
-        puts spec["title"]
-        puts "-" * spec["title"].length
-        puts "From package: #{pkgname}"
-        puts "Authors: #{spec["authors"].join(",")}"
-        puts "Difficulty: #{spec["difficulty"]}"
+      result = SmcGet::Package.search(@config[:search][:query], @config[:search][:fields], @config[:search][:only_local])
+      return 2 if result.empty?
+      result.each do |pkg|
+        #We need to check the only_local option here, because the level
+        #version in the repository may be newer than that one installed
+        #locally. pkg.installed? wouldn't have telled us that.
+        spec = if @config[:search][:only_local]
+          puts "[LOCAL PACKAGE]"
+          pkg.spec
+        else
+          puts "[REMOTE PACKAGE]"
+          pkg.getinfo
+        end
+        puts "Package title:     #{spec["title"]}"
+        puts "Real package name: #{pkg.name}"
+        puts "Authors:           #{spec["authors"].join(",")}"
+        puts "Difficulty:        #{spec["difficulty"]}"
         puts "Description:"
         puts spec["description"]
         puts

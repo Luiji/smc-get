@@ -34,6 +34,10 @@ CONFIG
   TEST_PACKAGES = %w[icy-mountain christmas-2010]
   #To test wheather smc-get does know what to do in case of non-existing packages.
   TEST_INVALID_PACKAGES = %w[sdhrfg jhjjjj]
+  
+  TEST_SEARCH_TERMS = ["icy", "chr.stmas"]
+  TEST_SEARCH_TERMS_NOT_FOUND = ["dfgd", "^icy$"]
+  
   #The command to run smc-get
   SMC_GET = File.join(File.expand_path(File.dirname(__FILE__)), "..", "bin", "smc-get")
   
@@ -83,6 +87,15 @@ CONFIG
     end
     TEST_INVALID_PACKAGES.each do |pkg|
       assert(!smc_get("getinfo #{pkg}"), "Retrieved info for broken package sucessfully.")
+    end
+  end
+  
+  def test_search
+    TEST_SEARCH_TERMS.each do |query|
+      assert(smc_get("search #{query}"), "Did not find packages it ought to find.")
+    end
+    TEST_SEARCH_TERMS_NOT_FOUND.each do |query|
+      assert(!smc_get("search #{query}"), "Did find packages for invalid query.")
     end
   end
   
