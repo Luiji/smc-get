@@ -183,8 +183,8 @@ EOF
         else
           exit
         end
-      rescue Errors::SmcGetError => e
-        $stderr.puts(e.message) #All SmcGetErrors should have an informative message
+      rescue Errno::EACCES, Errors::SmcGetError => e
+        $stderr.puts(e.message) #All SmcGetErrors should have an informative message (and the EACCES one too)
         exit 2
       rescue => e #Ouch. Fatal error not intended.
         $stderr.puts("[BUG] #{e.class}")
