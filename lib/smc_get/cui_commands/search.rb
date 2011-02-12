@@ -28,7 +28,8 @@ module SmcGet
         <<HELP
 USAGE: #$0 search [-a][-d][-D][-l][-L][-p][-t] QUERY
 
-Searches the local or remote repository for packages.
+Searches the local or remote repository for packages. QUERY is assumed 
+to be a regular expression. 
 
 OPTIONS:
   -a\t--authors\tSearch the author list.
