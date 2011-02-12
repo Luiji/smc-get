@@ -46,6 +46,10 @@ best if used alone.
 HELP
       end
       
+      def self.summary
+        "search\tSearch for a package."
+      end
+      
       def parse(args)
             CUI.debug("Parsing #{args.count} args for search.")
         raise(InvalidCommandline, "No query given.") if args.empty?

@@ -32,6 +32,10 @@ Shows help for a special SUBCOMMAND or for smc-get in general.
 EOF
       end
       
+      def self.summary
+        "help\t\tGet help on a specific command."
+      end
+      
       def parse(args)
             CUI.debug("Parsing #{args.count} args for help.")
         raise(InvalidCommandline, "Too many arguments.") if args.count > 1

@@ -32,6 +32,10 @@ Removes PACKAGE from your set of downloaded packages.
 EOF
       end
       
+      def self.summary
+        "uninstall\tUninstall a package."
+      end
+      
       def parse(args)
             CUI.debug("Parsing #{args.count} args for uninstall.")
         raise(InvalidCommandline, "No package given.") if args.empty?

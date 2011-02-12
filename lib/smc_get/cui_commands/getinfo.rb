@@ -38,6 +38,10 @@ package is already installed.
 HELP
       end
       
+      def self.summary
+        "getinfo\tGet information on a package."
+      end
+      
       def parse(args)
             CUI.debug("Parsing #{args.count} args for getinfo.")
         raise(InvalidCommandline, "No package given.") if args.empty?

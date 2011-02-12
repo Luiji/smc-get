@@ -23,13 +23,22 @@ module SmcGet
   module CUICommands
     
     #This is the superclass of all CUI commands. To make your own command,
-    #subclass it an overwrite ::help, #parse and #execute.
+    #subclass it an overwrite ::help, ::summary, #parse and #execute.
     class Command
       
       #The string returned from this method will be displayed to the
       #user if he issues <tt>smc-get help YOURCOMMAND</tt>.
       def self.help
         "(nothing known)"
+      end
+      
+      #One-line summary of the command that shows up in the COMMANDS
+      #section of <tt>smc-get help</tt>. Should not be longer than 78
+      #characters due to automatic indentation. You may have to insert
+      #tabs to make it displaycorrectly; make sure to check the result by
+      #issueing <tt>smc-get help</tt>.
+      def self.summary
+        ""
       end
       
       #Creates a new instance of this command. Do not override this, or

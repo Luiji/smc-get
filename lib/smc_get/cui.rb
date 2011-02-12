@@ -43,9 +43,12 @@ module SmcGet
   #CUI::InvalidCommandline exception with a meaningful message which will
   #then be presented to the user.
   #
-  #The last thing one should do when adding a command, is to modify the
-  #help message in the CUI::GENERAL_HELP constant to reflect the existance of
-  #a new command.
+  #The last things one should do when adding a command, is to provide
+  #a ::help class method that returns help on the usage of the command
+  #(it will be called when the user issues <tt>smc-get help YOURCOMMAND</tt>
+  #and it's return value will be shown to the user) and to provide
+  #a ::summary class method whose return value is integrated in the
+  #output of <tt>smc-get help</tt> under the COMMANDS section.
   #
   #In every method you add, you can make use of the CUI.debug method. If you
   #hand it a string, it will be printed only if running in debug mode, and
@@ -90,13 +93,15 @@ Install and uninstall levels from the Secret Maryo Chronicles contributed level
 repository.
 
 COMMANDS:
-  install\tinstall a package
-  uninstall\tuninstall a package
-  getinfo\tget information about a package
-  search\tsearch for a package
-  help\t\tprint this help message
+#{str = ''
+CUICommands.constants.sort.each do |c|
+  next if c == :Command
+  str << '  ' << CUICommands.const_get(c).summary << "\n"
+  end
+str}
 
-Use "help COMMAND" to get help on a specific command.
+Use "help COMMAND" to get help on a specific command. "help" without an
+argument displays this message.
 
 OPTIONS FOR #$0 itself
   -c\t--config-file FILE\tUse FILE as the configuration file.

@@ -35,6 +35,10 @@ OPTIONS:
 HELP
       end
       
+      def self.summary
+        "install\tInstall a package."
+      end
+      
       def parse(args)
             CUI.debug("Parsing #{args.count} args for install.")
         raise(InvalidCommandline, "No package given.") if args.empty?
