@@ -28,9 +28,9 @@ module SmcGet
         <<HELP
 USAGE: #$0 getinfo [-r] PACKAGE
 
-Retrieves information about PACKAGE. 
+Retrieves information about PACKAGE.
 
-OPTIONS: 
+OPTIONS:
 \r-r\t--remote\tForces getinfo to do a remote lookup.
 
 The default behaviour is to do a local lookup if the
@@ -57,13 +57,11 @@ HELP
       def execute
         pkg = Package.new(@pkg_name)
         #Get the information
-        info = if pkg.installed?
-          if @force_remote
-            pkg.getinfo(true)
-          else
-            pkg.getinfo
-          end
+        info = if pkg.installed? and !@force_remote
+          puts "[LOCAL PACKAGE]"
+          pkg.spec
         else
+          puts "[REMOTE PACKAGE]"
           pkg.getinfo
         end
         #Now output the information

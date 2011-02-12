@@ -233,24 +233,28 @@ module SmcGet
       SmcGet.datadir.join(PACKAGE_SPECS_DIR, "#{@name}.yml").file?
     end
     
-    # Get package information.  WARNING: This function is not thread-safe.
-    def getinfo(force_remote = false)
+    #Get package information on a remote package. This method never
+    #retrieves any information from a locally installed package, look
+    #at #spec for that. Return value is the package specification in form
+    #of a hash.
+    #
+    #WARNING: This function is not thread-safe.
+    def getinfo
       yaml = nil
-      if force_remote or !installed?
-        Tempfile.open('pkgdata') do |tmp|
-          begin
-            SmcGet.download("packages/#{@name}.yml", tmp.path)
-          rescue Errors::DownloadFailedError
-            raise(Errors::NoSuchPackageError.new(@name), "ERROR: Package not found in the repository: #{@name}")
-          end
-          yaml = YAML.load_file(tmp.path)
+      Tempfile.open('pkgdata') do |tmp|
+        begin
+          SmcGet.download("packages/#{@name}.yml", tmp.path)
+        rescue Errors::DownloadFailedError
+          raise(Errors::NoSuchPackageError.new(@name), "ERROR: Package not found in the repository: #{@name}")
         end
-      else
-        yaml = YAML.load_file(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml")
+        yaml = YAML.load_file(tmp.path)
       end
       return yaml
     end
     
+    #Retrieves the package specification from a locally installed package
+    #in form of a hash. In order to fetch information from a remote package,
+    #you have to use the #getinfo method.
     def spec
       if installed?
         YAML.load_file(@spec_file)
