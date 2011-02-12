@@ -59,7 +59,7 @@ HELP
         @pkg_name = args.shift
       end
       
-      def execute
+      def execute(config)
             CUI.debug("Executing getinfo.")
         pkg = Package.new(@pkg_name)
         #Get the information

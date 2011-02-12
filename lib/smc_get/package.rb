@@ -120,81 +120,65 @@ module SmcGet
       @spec_file = SmcGet.datadir.join(PACKAGE_SPECS_DIR, "#{@name}.yml")
     end
     
-    # Install a package from the repository. Yields the total progress in percent,
-    # the name of the file currently being downloaded and how many percent of that
-    # file have already been downloaded.
-    def install
-      percent_total = 0 #For reporting the total progress
+    # Install a package from the repository. Yields the name of the file
+    # currently being downloaded, how many percent of that
+    # file have already been downloaded and wheather or not this is a retry (if
+    # so, the exception object is yielded, otherwise false).
+    # The maximum number of retries is specified via the +max_tries+ parameter.
+    def install(max_tries = 3) # :yields: file, percent_file, retrying
+      try = 1 #For avoiding retrying infinitely
       begin
-        SmcGet.download(
-        "packages/#{@name}.yml",
-        SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml"
-        ) do |file, percent_done|
-          yield(percent_total, file, percent_done) if block_given?
+        SmcGet.download("packages/#{@name}.yml", SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml") do |file, percent_done|
+          yield(file, percent_done, false) if block_given?
         end
-      rescue Errors::DownloadFailedError
-        File.delete(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml") #There is an empty file otherwise
-        raise(Errors::NoSuchPackageError.new(@name), "ERROR: Package not found in the repository: #{@name}.")
+      rescue Errors::DownloadFailedError => e
+        if try > max_tries
+          File.delete(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml") #There is an empty file otherwise
+          if e.class == Errors::ConnectionTimedOutError
+            raise #Bubble up
+          else
+            raise(Errors::NoSuchPackageError.new(@name), "ERROR: Package not found in the repository: #{@name}.")
+          end
+        else
+          try += 1
+          yield(e.download_url, 0, e) if block_given?
+          retry
+        end
       end
       
       pkgdata = YAML.load_file(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml")
-      percent_total = 25 #%
+      package_parts = [["levels", :level], ["music", :music], ["graphics", :graphic]]
       
-      if pkgdata.has_key?('music')
-        pkgdata['music'].each do |filename|
-          begin
-            SmcGet.download(
-            "music/#{filename}",
-            SmcGet.datadir + PACKAGE_MUSIC_DIR + filename
-            ) do |file, percent_done|
-              yield(percent_total, file, percent_done) if block_given?
-            end
-          rescue Errors::DownloadFailedError => error
-            raise(Errors::NoSuchResourceError.new(:music, error.download_url), "ERROR: Music not found in the repository: #{filename}.")
-          end
-        end
-      end
-      
-      percent_total = 50 #%
-      
-      if pkgdata.has_key?('graphics')
-        pkgdata['graphics'].each do |filename|
-          begin
-            SmcGet.download(
-            "graphics/#{filename}",
-            SmcGet.datadir + PACKAGE_GRAPHICS_DIR + filename
-            ) do |file, percent_done|
-              yield(percent_total, file, percent_done) if block_given?
-            end
-          rescue Errors::DownloadFailedError => error
-            raise(Errors::NoSuchResourceError.new(:graphic, error.download_url), "ERROR: Graphic not found in the repository: #{filename}.")
-          end
-        end
-      end
-      
-      percent_total = 75 #%
-      
-      if pkgdata.has_key?('levels')
-        pkgdata['levels'].each_with_index do |filename, index|
-          begin
-            SmcGet.download(
-            "levels/#{filename}",
-            SmcGet.datadir + PACKAGE_LEVELS_DIR + filename
-            ) do |file, percent_done|
-              #The last value the user shall see are 100%, so in the last
-              #iteration we set percent_total to 100.
-              percent_total = 100 if index == pkgdata["levels"].count - 1 #Index is 0-based
-              yield(percent_total, file, percent_done) if block_given?
-            end
-          rescue Errors::DownloadFailedError => error
-            raise(Errors::NoSuchResourceError.new(:level, error.download_url), "ERROR: Level not found in the repository: #{filename}.")
-          end
-        end
-      end
-    end
+      package_parts.each_with_index do |ary, i|
+        part, sym = ary
+        try = 1
+        
+        if pkgdata.has_key?(part)
+          pkgdata[part].each do |filename|
+            begin
+              SmcGet.download("#{part}/#{filename}", SmcGet.datadir + SmcGet.const_get(:"PACKAGE_#{part.upcase}_DIR") + filename) do |file, percent_done|
+                yield(file, percent_done, false) if block_given?
+              end
+            rescue Errors::DownloadFailedError => e
+              if try > max_tries
+                if e.class == Errors::ConnectionTimedOutError
+                  raise #Bubble up
+                else
+                  raise(Errors::NoSuchResourceError.new(sym, error.download_url), "ERROR: #{sym.capitalize} not found in the repository: #{filename}.")
+                end
+              else
+                try += 1
+                yield(e.download_url, 0, e) if block_given?
+                retry
+              end #if try > max_tries
+            end #begin
+          end #each part
+        end #has_key?
+      end #each part and sym
+    end #install
     
     # Uninstall a package from the local database. If a block is given,
-    # it is yielded the total progress in percent, the package part currently being deleted, and
+    # it is yielded the package part currently being deleted and
     # how many percent of the files have already been deleted for the current package
     # part.
     def uninstall
@@ -204,8 +188,6 @@ module SmcGet
         raise(Errors::NoSuchPackageError.new(@name), "ERROR: Local package not found: #{@name}.")
       end
       
-      percent_total = 0 #For reporting the total progress
-      
       %w[music graphics levels].each_with_index do |part, part_index|
         if pkgdata.has_key? part
           total_files = pkgdata[part].count
@@ -214,14 +196,9 @@ module SmcGet
               File.delete(SmcGet.datadir + SmcGet.const_get("PACKAGE_#{part.upcase}_DIR") + filename)
             rescue Errno::ENOENT
             end
-            #The last value the user shall see is 100%, so set it in
-            #the very last (i.e. last of the outer and inner loop) iteration
-            #to 100.
-            percent_total = 100 if part_index == 2 and index == total_files - 1
-            yield(percent_total, part, ((index + 1) / total_files) * 100) if block_given? #+1, because index is 0-based
+            yield(part, ((index + 1) / total_files) * 100) if block_given? #+1, because index is 0-based
           end
         end
-        percent_total = ((part_index + 1) / 3.0) * 100 #+1, because index is 0-based (3 is the total number of iterations)
       end
       
       File.delete(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml")

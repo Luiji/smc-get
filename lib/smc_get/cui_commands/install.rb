@@ -56,7 +56,7 @@ HELP
         @pkg_name = args.shift
       end
       
-      def execute
+      def execute(config)
             CUI.debug("Executing install.")
         pkg = Package.new(@pkg_name)
         if pkg.installed?
@@ -70,10 +70,14 @@ HELP
         puts "Installing #{pkg}."
         #Windows doesn't understand ANSI escape sequences, so we have to
         #use the carriage return and reprint the whole line.
-        base_str = "\r[%.2f%%] Downloading %s... (%.2f%%)"
-        pkg.install do |percent_total, filename, percent_filename|
-          print "\r", " " * 80 #Clear everything written before
-          printf(base_str, percent_total, filename, percent_filename)
+        base_str = "\rDownloading %s... (%.2f%%)"
+        pkg.install(config[:max_tries]) do |filename, percent_filename, retrying|
+          if retrying
+            puts "#{retrying.message} Retrying."
+          else
+            print "\r", " " * 80 #Clear everything written before
+            printf(base_str, filename, percent_filename)
+          end
         end
         puts
       end

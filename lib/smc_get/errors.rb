@@ -105,5 +105,9 @@ module SmcGet
       end
     end
     
+    #Raised when SmcGet.download timed out.
+    class ConnectionTimedOutError < DownloadFailedError
+    end
+    
   end
 end

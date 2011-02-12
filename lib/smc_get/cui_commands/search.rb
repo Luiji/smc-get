@@ -77,7 +77,7 @@ HELP
         @query = Regexp.new(args.shift)
       end
       
-      def execute
+      def execute(config)
             CUI.debug("Executing search.")
         result = SmcGet::Package.search(@query, @search_fields, @only_local)
         return 2 if result.empty?

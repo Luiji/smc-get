@@ -104,26 +104,30 @@ module SmcGet
         request = Net::HTTP.new(uri.host, uri.port)
         request.use_ssl = true #GitHub uses SSL
         
-        request.start do
-          #1. Establish connection
-          request.request_get(uri.path) do |response|
-            raise(Errors::DownloadFailedError.new(url), "Received HTTP error code #{response.code}.") unless response.code == "200"
-            #2. Get what size the file is
-            final_size = response.content_length
-            current_size = 0
-            #Ensure the first value the user sees are 0%
-            yield(url, 0) if block_given?
-            #3. Get the actual file in parts and report percent done.
-            response.read_body do |part|
-              outputfile.write(part)
-              
-              current_size += part.size
-              percent = (current_size.to_f / final_size.to_f) * 100
-              yield(url, percent) if block_given?
+        begin
+          request.start do
+            #1. Establish connection
+            request.request_get(uri.path) do |response|
+              raise(Errors::DownloadFailedError.new(url), "ERROR: Received HTTP error code #{response.code}.") unless response.code == "200"
+              #2. Get what size the file is
+              final_size = response.content_length
+              current_size = 0
+              #Ensure the first value the user sees are 0%
+              yield(url, 0) if block_given?
+              #3. Get the actual file in parts and report percent done.
+              response.read_body do |part|
+                outputfile.write(part)
+                
+                current_size += part.size
+                percent = (current_size.to_f / final_size.to_f) * 100
+                yield(url, percent) if block_given?
+              end
             end
+            #Ensure the last value the user sees are 100%
+            yield(url, 100) if block_given?
           end
-          #Ensure the last value the user sees are 100%
-          yield(url, 100) if block_given?
+        rescue Timeout::Error
+          raise(Errors::ConnectionTimedOutError.new(url), "ERROR: Connection timed out.")
         end
       end
     end

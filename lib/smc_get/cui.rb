@@ -53,7 +53,8 @@ module SmcGet
   #In every method you add, you can make use of the CUI.debug method. If you
   #hand it a string, it will be printed only if running in debug mode, and
   #if you hand it any other object, it's +inspect+ value will be printed--if
-  #running in debug mode.
+  #running in debug mode. See the SmcGet::CUICommands::Command class's
+  #documentation for more information on the hook methods.
   #
   #Internally the flow is as follows:
   #1. The user calls CUI#initialize with ARGV.
@@ -175,7 +176,7 @@ EOF
     #calls #exit after the command has finished.
     def start
       begin
-        ret = @command.execute
+        ret = @command.execute(@config)
         #If numbers are returned they are supposed to be the exit code.
         if ret.kind_of? Integer
           exit ret

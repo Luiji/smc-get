@@ -42,7 +42,7 @@ EOF
         @command = args.shift #nil if not given
       end
       
-      def execute
+      def execute(config)
             CUI.debug("Executing help.")
         if @command
           sym = :"#{@command.capitalize}Command"

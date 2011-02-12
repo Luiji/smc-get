@@ -59,7 +59,14 @@ module SmcGet
       end
       
       #Execute the command. You can use the instance variables set in #parse.
-      def execute
+      #The method gets passed the parsed contents of smc-get's configuration
+      #files and commandline parameters; you can use this to make your command
+      #configurable via the configuration file, but make sure that
+      #1. The keys you use for your configuration don't already exist,
+      #2. options specified on the commandline take precedence over values
+      #   set in the configuration file and
+      #3. you <b>do not alter</b> the hash.
+      def execute(config)
         raise(NotImplementedError, "#{__method__} has to be overriden in a subclass!")
       end
       

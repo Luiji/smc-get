@@ -51,16 +51,16 @@ EOF
         @pkg_name = args.shift
       end
       
-      def execute
+      def execute(config)
             CUI.debug("Executing uninstall.")
         pkg = Package.new(@pkg_name)
         puts "Uninstalling #{pkg}."
         #Windows doesn't understand ANSI escape sequences, so we have to
         #use the carriage return and reprint the whole line.
-        base_str = "\r[%.2f%%] Removing %s... (%.2f%%)"
-        pkg.uninstall do |percent_total, part, percent_part|
+        base_str = "\rRemoving %s... (%.2f%%)"
+        pkg.uninstall do |part, percent_part|
           print "\r", " " * 80 #Clear everything written before
-          printf(base_str, percent_total, part, percent_part)
+          printf(base_str, part, percent_part)
         end
       end
       
