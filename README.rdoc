@@ -64,6 +64,11 @@ can specify a config file via <tt>-c</tt>, but make sure it contains all
 possible options, otherwise those in the global or user-level config files
 may affect your program. See below for an example.
 
+Be careful when using +sudo+, because it changes the environment variables.
+smc-get may not find your user-level configuration file when using sudo,
+because it derives the path from the +USER+ environment variable which may
+get set to +root+ when using +sudo+.
+
 In the configuration file you can set some general options, look into
 the file which is quite self-explanatory. A sample configuration may
 look like this:
