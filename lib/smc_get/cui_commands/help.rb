@@ -26,9 +26,9 @@ module SmcGet
       
       def self.help
         <<EOF
-USAGE: #$0 help [SUBCOMMAND]
+USAGE: #{File.basename($0)} help [SUBCOMMAND]
 
-Shows help for a special SUBCOMMAND or for smc-get in general.
+Shows help for a special SUBCOMMAND or for #{File.basename($0)} in general.
 EOF
       end
       

@@ -26,7 +26,7 @@ module SmcGet
       
       def self.help
         <<HELP
-USAGE: #$0 install [-r] PACKAGE
+USAGE: #{File.basename($0)} install [-r] PACKAGE
 
 Installs a package.
 

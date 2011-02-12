@@ -26,7 +26,7 @@ module SmcGet
       
       def self.help
         <<HELP
-USAGE: #$0 search [-a][-d][-D][-l][-L][-p][-t] QUERY
+USAGE: #{File.basename($0)} search [-a][-d][-D][-l][-L][-p][-t] QUERY
 
 Searches the local or remote repository for packages. QUERY is assumed
 to be a regular expression.

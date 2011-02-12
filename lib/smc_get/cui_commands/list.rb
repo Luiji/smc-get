@@ -26,7 +26,7 @@ module SmcGet
       
       def self.help
         <<EOF
-USAGE: #$0 list [PACKAGE]
+USAGE: #{File.basename($0)} list [PACKAGE]
 
 If PACKAGE is given, lists all files installed by PACKAGE. Otherwise,
 all installed packages are listed accompanied by their installation

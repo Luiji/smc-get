@@ -26,7 +26,7 @@ module SmcGet
       
       def self.help
         <<HELP
-USAGE: #$0 getinfo [-r] PACKAGE
+USAGE: #{File.basename($0)} getinfo [-r] PACKAGE
 
 Retrieves information about PACKAGE.
 

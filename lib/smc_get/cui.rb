@@ -86,7 +86,7 @@ module SmcGet
     #The help message displayed to the user when issueing "help".
     GENERAL_HELP =<<EOF
 USAGE:
-#{$0} [OPTIONS] COMMAND [PARAMETERS...]
+#{File.basename($0)} [OPTIONS] COMMAND [PARAMETERS...]
 
 DESCRIPTION:
 Install and uninstall levels from the Secret Maryo Chronicles contributed level
@@ -103,14 +103,14 @@ str}
 Use "help COMMAND" to get help on a specific command. "help" without an
 argument displays this message.
 
-OPTIONS FOR #$0 itself
+OPTIONS FOR #{File.basename($0)} itself
   -c\t--config-file FILE\tUse FILE as the configuration file.
   -d\t--data-directory DIR\tSet the directory where to save packages into.
   -D\t--debug\t\t\tEnter debug mode. A normal user shouldn't use this.
   -r\t--repo-url URL\t\tSet the URL of the remote package repository.
 
 CONFIGURATION FILES
-You can use three kinds of configuration files with #$0. They are,
+You can use three kinds of configuration files with #{File.basename($0)}. They are,
 in the order in which they are evaluated:
 
 1. Global configuration file #{DEFAULT_CONFIG_FILE}.
@@ -122,7 +122,7 @@ configuration files, i.e. values set in the configuration file provided via
 the commandline override those in the global and user-level configuration
 file, and those in the user-level configuration file override those in the
 global configuration file, etc.
-There is a 4th way to set options for #$0:
+There is a 4th way to set options for #{File.basename($0)}:
 
 4. Options given via the commandline
 

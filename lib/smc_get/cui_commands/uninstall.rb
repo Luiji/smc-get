@@ -26,7 +26,7 @@ module SmcGet
       
       def self.help
         <<EOF
-#$0 uninstall PACKAGE
+#{File.basename($0)} uninstall PACKAGE
 
 Removes PACKAGE from your set of downloaded packages.
 EOF
