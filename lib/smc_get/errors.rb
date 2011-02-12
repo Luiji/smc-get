@@ -27,7 +27,7 @@ module SmcGet
     class SmcGetError < StandardError
     end
     
-    #Raises when you did not call SmcGet.datadir= and SmcGet.repo_url=.
+    #Raises when you did not call SmcGet.setup.
     class LibraryNotInitialized < SmcGetError
       
       #Throws an exception of this class with an appropriate error

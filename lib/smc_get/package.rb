@@ -27,9 +27,11 @@ module SmcGet
   #  pkg = SmcGet::Package.new("mypackage")
   #  pkg.install
   #Don't forget to set up smc-get before you use the library:
-  #  require "smc_get/smc_get"
-  #  SmcGet.datadir = "dir/where/you/hava/smc/installed"
-  #  SmcGet.repo_url = "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/
+  #  require "smc_get/"
+  #  SmcGet.setup(
+  #    "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/",
+  #    "dir/where/you/hava/smc/installed"
+  #  end
   class Package
     
     #The package specification file for this packages. This file may not
