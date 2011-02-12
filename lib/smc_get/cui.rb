@@ -71,6 +71,9 @@ module SmcGet
     
     #Default location of the configuration file.
     DEFAULT_CONFIG_FILE = CONFIG_DIR + "smc-get.yml"
+    #Name of the configuration file a user may put in his home
+    #directory.
+    USER_CONFIG_FILE_NAME = ".smc-get-conf.yml"
     
     #The help message displayed to the user when issueing "help".
     GENERAL_HELP =<<EOF
@@ -92,8 +95,29 @@ Use "help COMMAND" to get help on a specific command.
 
 OPTIONS FOR #$0 itself
   -c\t--config-file FILE\tUse FILE as the configuration file.
-  -d\t--data-directory DIR\tOverride the data_directory setting from the
-  \t\t\t\tconfiguration file.
+  -d\t--data-directory DIR\tSet the directory where to save packages into.
+  -r\t--repo-url URL\t\tSet the URL of the remote package repository.
+
+CONFIGURATION FILES
+You can use three kinds of configuration files with #$0. They are,
+in the order in which they are evaluated:
+
+1. Global configuration file #{DEFAULT_CONFIG_FILE}.
+2. If existant, user-level configuration file #{File.join(ENV["HOME"], USER_CONFIG_FILE_NAME)}.
+3. If existant, configuration file given on the commandline via the -c option.
+
+Configuration files loaded later overwrite values set in previously loaded
+configuration files, i.e. values set in the configuration file provided via
+the commandline override those in the global and user-level configuration
+file, and those in the user-level configuration file override those in the
+global configuration file, etc.
+There is a 4th way to set options for #$0:
+
+4. Options given via the commandline
+
+They override anything set in the configuration files, so specifying
+'-d /opt/smc' on the commandline would override any 'data_directory'
+setting in any of the configuration files.
 
 Report bugs to: luiji@users.sourceforge.net
 smc-get home page: <http://www.secretmaryo.org/>
@@ -144,16 +168,18 @@ EOF
     #CUICommands module, making smc-get easily extendable by
     #adding a new class inside that module.
     def parse_commandline(argv)
-      #Get options for smc-get itself, rather than it's subcommands.
-      #First, define the default behaviour:
-      @config_file = DEFAULT_CONFIG_FILE
-      #Now, check for updates:
+      #Get options for smc-get itself, rather than it's subcommands. Values set
+      #here override anything set in any configuration file; but since the
+      #keys are turned to symbols in #load_config_file, we have to use
+      #strings as keys here (otherwise merging with the config files'
+      #settings would fail).
+      @cmd_config = nil
       while !argv.empty? and argv.first.start_with?("-") #All options start with a hyphen, commands cannot
         arg = argv.shift
         case arg
-        #-c CONFIG | --config-file CONFIG
-        when "-c", "--config-file" then @config_file = Pathname.new(argv.shift)
-        when "-d", "--data-directory" then @config[:data_directory] = argv.shift
+        when "-c", "--config-file" then @cmd_config = Pathname.new(argv.shift)
+        when "-d", "--data-directory" then @config["data_directory"] = argv.shift
+        when "-r", "--repo-url" then @config["repo_url"] = argv.shift
         else
           $stderr.puts("Invalid option #{arg}.")
           $stderr.puts("Try #$0 help.")
@@ -183,16 +209,27 @@ EOF
     
     #Loads the configuration file from the <b>config/</b> directory.
     def load_config_file
-      #Check for existance of the configuration file and use the
-      #default if it doesn't exist.
-      unless @config_file.file?
-        $stderr.puts("Configuration file #@config_file not found.")
-        $stderr.puts("Falling back to the default configuration file.")
-        @config_file = DEFAULT_CONFIG_FILE
+      #First, load the global configuration file.
+      hsh = YAML.load_file(DEFAULT_CONFIG_FILE)
+      #Second, load the user config which overrides values set in
+      #the global config.
+      user_config_file = Pathname.new(ENV["HOME"]) + USER_CONFIG_FILE_NAME
+      hsh.merge!(YAML.load_file(user_config_file.to_s)) if user_config_file.file?
+      #Third, load the config file from the commandline, if any. This overrides
+      #values set in the user and global config.
+      if @cmd_config
+        if @cmd_config.file?
+          hsh.merge!(YAML.load_file(@cmd_config.to_s))
+        else
+          $stderr.puts("Configuration file #{@cmd_config} not found.")
+        end
       end
-      #Load the config file and turn it's keys to symbols
-      hsh = Hash[YAML.load_file(@config_file.to_s).map{|k, v| [k.to_sym, v]}]
-      @config.merge!(hsh){|key, old_val, new_val| old_val} #Command-line args overwrite those in the config
+      #Fourth, check for values on the commandline. They override anything
+      #set previously. They are set directly in @config, so we simply have
+      #to retain the old values in it.
+      @config.merge!(hsh){|key, old_val, new_val| old_val}
+      #Fifth, turn all keys into symbols, because that's more Ruby-like.
+      @config = Hash[@config.map{|k, v| [k.to_sym, v]}]
     end
     
   end
