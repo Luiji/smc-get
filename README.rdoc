@@ -2,8 +2,9 @@
 smc-get - Library and command-line for managing SMC level packages.
 
 Author::      Luiji Maryo (mailto:luiji@users.sourceforge.net)
-Contributor:: Quintus (mailto:sutniuq@gmx.net)
-Copyright::   Copyright (C) 2010 Entertaining Software, Inc.
+Contributor:: Marvin Gülker (mailto:sutniuq@gmx.net)
+Copyright::   Copyright (C) 2010-2011 Entertaining Software, Inc.
+Copyright::   Copyright (C) 2011 Marvin Gülker
 License::     GNU General Public License (see COPYING)
 
 = Synopsis for use as a command-line tool
@@ -13,10 +14,13 @@ License::     GNU General Public License (see COPYING)
 
 = Synopsis for use as a library
   require 'smc_get'
-  #Set Luiji's contributed level directory as the source
-  SmcGet.repo_url = "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/"
-  #Indicate your SMC installation path
-  SmcGet.datadir = "/usr/local/share/smc"
+  #Initialize the library
+  SmcGet.setup(
+    #From where to download packages
+    "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/",
+    #Where to install packages (your SMC installation)
+    "/usr/local/share/smc"
+  )
   #Get a package
   pkg = SmcGet::Package.new("mypackage")
   #Install it!
@@ -44,13 +48,21 @@ Where <tt>COMMAND</tt> is the command and <tt>PARAMATERS...</tt> are the
 parameters for that command.
 
 To get help on the various commands, use the help command.
- smc-get help
+ smc-get help [COMMAND]
+Ommit the +COMMAND+ if you want general usage information.
 
 === Configuration file
 smc-get requires a configuration file when used as a commandline tool.
 By default it searches for <tt>smc-get.yml</tt> in the <b>config/</b>
-subdirectory of your smc-get installation, but front-ends can change
-this directory (see below).
+subdirectory of your smc-get installation, then for <tt>smc-get-conf.yml</tt>
+in the user's home directory and then for the file specified via the <tt>-c</tt>
+commandline switch, if existant. Values set in later evaluated configuration
+files override those in prevously evaluated ones; see
+  smc-get help
+for more explanation. If you want to use the CUI from your scripts, you
+can specify a config file via <tt>-c</tt>, but make sure it contains all
+possible options, otherwise those in the global or user-level config files
+may affect your program. See below for an example.
 
 In the configuration file you can set some general options, look into
 the file which is quite self-explanatory. A sample configuration may
@@ -65,8 +77,10 @@ used as a library.  This is useful when, for instance, creating a GUI front-end.
 To initialize the library, indicate which repository you are using and
 where you want smc-get to install the packages to (which is usually your
 SMC installation path)
-  SmcGet.repo_url = "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/"
-  SmcGet.datadir = "/usr/local/share/smc"
+  SmcGet.setup(
+    "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/",
+    "/usr/local/share/smc"
+  )
 
 For interacting with the SMC repository, smc-get exposes an object-oriented API
 centered around the SmcGet::Package class. After you initialized the library
@@ -104,9 +118,11 @@ your scripts, do
   cui = SmcGet::CUI.new(ARGV)
   cui.start
 The configuration file from the <b>config/</b> directory will automatically
-be loaded, you may specify another configuration file by placing the
-appropriate option in ARGV:
-  ARGV.unshift("-c YOURCONFIGFILE.yml")
+be loaded as well as the user-level configuration file; you may specify another
+configuration file by placing the appropriate option in ARGV:
+  ARGV.unshift("-c")
+  ARGV.unshift("YOURCONFIGFILE.yml")
+  
   cui = SmcGet::CUI.new(ARGV)
   cui.start
 

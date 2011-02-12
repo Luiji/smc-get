@@ -63,24 +63,28 @@ module SmcGet
   
   class << self
     
-    #This is the base URL from which packages are downloaded. This
-    #should be set to Luiji's level repository.
-    attr_accessor :repo_url
-    
-    #This is the directory in which music, levels, etc. are saved
-    #into on the local machine. This should be set to your
-    #SMC installation.
-    def datadir
-      @datadir
-    end
-    
-    #See reader for explanation.
-    def datadir=(str)
-      @datadir = Pathname.new(str)
-    end
+    #The URL of the repository.
+    attr_reader :repo_url
+    #The directory where SMC is installed.
+    attr_reader :datadir
     
     @repo_url = nil
     @datadir = nil
+    
+    #Initializes the library. Pass in the URL from which you want
+    #to downloaded packages (most likely Luiji's contributed level
+    #repository at <tt>https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/</tt>)
+    #and the directory where SMC is installed (something along the lines of
+    #<b>/usr/share/smc</b>). Note you *have* to call this method before
+    #you can make use of the smc-get library; otherwise you'll get bombed
+    #by SmcGet::Errors::LibraryNotInitialized exceptions.
+    #
+    #You may call this method more than once if you want to reinitialize
+    #the library to use other resources.
+    def setup(repo_url, datadir)
+      @repo_url = repo_url
+      @datadir = Pathname.new(datadir)
+    end
     
     # Download the specified raw file from the repository to the specified
     # output file.  URL should be everything in the URL after

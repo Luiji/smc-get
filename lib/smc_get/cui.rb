@@ -163,8 +163,7 @@ EOF
       @config = {}
       parse_commandline(argv)
       load_config_file
-      SmcGet.repo_url = @config[:repo_url]
-      SmcGet.datadir = @config[:data_directory]
+      SmcGet.setup(@config[:repo_url], @config[:data_directory])
     end
     
     #Starts executing of the CUI. This method never returns, it

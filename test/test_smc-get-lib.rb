@@ -64,8 +64,7 @@ CONFIG
   def setup
     FileUtils.mkdir_p(TEST_DIR)
     File.open(TEST_CONFIG_FILE, "w"){|f| f.write(TEST_CONFIG)}
-    SmcGet.repo_url = TEST_REPO
-    SmcGet.datadir = TEST_DIR
+    SmcGet.setup(TEST_REPO, TEST_DIR)
   end
   
   #Cleanup afterwards. Delete our testing directory. Run after EACH test.
