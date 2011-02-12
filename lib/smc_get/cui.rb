@@ -58,7 +58,7 @@ module SmcGet
   #   the like will fail.
   #5. The user calls CUI#start.
   #6. #start looks into @command and invokes the #execute method on it.
-  #6. #start shuts down the interpreter via #exit. If the command execution
+  #7. #start shuts down the interpreter via #exit. If the command execution
   #   method returned an integer value, it is used as the exit status.
   #
   #Have a look at the existing commands to see how it works. Especially
@@ -181,6 +181,7 @@ EOF
       end
     end
     
+    #Loads the configuration file from the <b>config/</b> directory.
     def load_config_file
       #Check for existance of the configuration file and use the
       #default if it doesn't exist.

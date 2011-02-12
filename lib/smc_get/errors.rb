@@ -20,6 +20,7 @@
 
 module SmcGet
   
+  #This module contains all errors messages that are specific to smc-get.
   module Errors
     
     #Superclass for all errors in this library.
