@@ -18,12 +18,11 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
+#Load all the files in the cui_commands directory.
 require_relative "cui_commands/command"
-require_relative "cui_commands/getinfo"
-require_relative "cui_commands/help"
-require_relative "cui_commands/install"
-require_relative "cui_commands/uninstall"
-require_relative "cui_commands/search"
+Dir[File.join(File.expand_path(File.dirname(__FILE__)), "cui_commands", "*.rb")].each do |filename|
+  require_relative "cui_commands/#{File.basename(filename)}"
+end
 
 module SmcGet
   
