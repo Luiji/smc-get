@@ -22,20 +22,34 @@ module SmcGet
   
   module CUICommands
     
+    #This is the superclass of all CUI commands. To make your own command,
+    #subclass it an overwrite ::help, #parse and #execute.
     class Command
       
+      #The string returned from this method will be displayed to the
+      #user if he issues <tt>smc-get help YOURCOMMAND</tt>.
       def self.help
-        ""
+        "(nothing known)"
       end
       
+      #Creates a new instance of this command. Do not override this, or
+      #call at least +super+.
       def initialize(args)
         parse(args)
       end
       
+      #This method gets all commandline options relevant for this subcommand
+      #passed in the +args+ array. You should parse them destructively, i.e.
+      #after you finished parsing, +args+ should be an empty array.
+      #Set instance variables to save data.
+      #
+      #Note that SmcGet is not set up when this method is called, so you
+      #cannot to things like <tt>Package.new</tt>.
       def parse(args)
         raise(NotImplementedError, "#{__method__} has to be overriden in a subclass!")
       end
       
+      #Execute the command. You can use the instance variables set in #parse.
       def execute
         raise(NotImplementedError, "#{__method__} has to be overriden in a subclass!")
       end

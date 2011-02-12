@@ -28,11 +28,12 @@ module SmcGet
         <<EOF
 #$0 uninstall PACKAGE
 
-Removes PACKAGE from your set of downloaded packages. 
+Removes PACKAGE from your set of downloaded packages.
 EOF
       end
       
       def parse(args)
+            CUI.debug("Parsing #{args.count} args for uninstall.")
         raise(InvalidCommandline, "No package given.") if args.empty?
         while args.count > 1
           arg = args.shift
@@ -47,6 +48,7 @@ EOF
       end
       
       def execute
+            CUI.debug("Executing uninstall.")
         pkg = Package.new(@pkg_name)
         puts "Uninstalling #{pkg}."
         #Windows doesn't understand ANSI escape sequences, so we have to

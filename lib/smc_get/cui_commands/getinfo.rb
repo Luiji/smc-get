@@ -39,6 +39,7 @@ HELP
       end
       
       def parse(args)
+            CUI.debug("Parsing #{args.count} args for getinfo.")
         raise(InvalidCommandline, "No package given.") if args.empty?
         @force_remote = false
         
@@ -55,6 +56,7 @@ HELP
       end
       
       def execute
+            CUI.debug("Executing getinfo.")
         pkg = Package.new(@pkg_name)
         #Get the information
         info = if pkg.installed? and !@force_remote

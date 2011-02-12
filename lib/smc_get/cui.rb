@@ -47,6 +47,11 @@ module SmcGet
   #help message in the CUI::GENERAL_HELP constant to reflect the existance of
   #a new command.
   #
+  #In every method you add, you can make use of the CUI.debug method. If you
+  #hand it a string, it will be printed only if running in debug mode, and
+  #if you hand it any other object, it's +inspect+ value will be printed--if
+  #running in debug mode.
+  #
   #Internally the flow is as follows:
   #1. The user calls CUI#initialize with ARGV.
   #2. That method triggers CUI#parse_commandline and passes ARGV to it.
@@ -96,6 +101,7 @@ Use "help COMMAND" to get help on a specific command.
 OPTIONS FOR #$0 itself
   -c\t--config-file FILE\tUse FILE as the configuration file.
   -d\t--data-directory DIR\tSet the directory where to save packages into.
+  -D\t--debug\t\t\tEnter debug mode. A normal user shouldn't use this.
   -r\t--repo-url URL\t\tSet the URL of the remote package repository.
 
 CONFIGURATION FILES
@@ -119,9 +125,35 @@ They override anything set in the configuration files, so specifying
 '-d /opt/smc' on the commandline would override any 'data_directory'
 setting in any of the configuration files.
 
+BUG REPORTING
+
 Report bugs to: luiji@users.sourceforge.net
 smc-get home page: <http://www.secretmaryo.org/>
 EOF
+    
+    #Writes <tt>obj.inspect</tt> to $stdout if the CUI is running in debug
+    #mode. If +obj+ is a string, it is simply written out.
+    def self.debug(obj)
+      if @DEBUG_MODE
+        if obj.kind_of? String
+          puts obj
+        else
+          puts(obj.inspect)
+        end
+      end
+    end
+    
+    @DEBUG_MODE = false
+    
+    #Returns wheather or not we're running in debug mode.
+    def self.debug_mode?
+      @DEBUG_MODE
+    end
+    
+    #Set to +true+ to enable debug mode.
+    def self.debug_mode=(val)
+      @DEBUG_MODE = val
+    end
     
     #Creates a new CUI. Pass in ARGV or a set of command-line arguments
     #you want to and read this class's documentation for knowing what
@@ -179,6 +211,7 @@ EOF
         case arg
         when "-c", "--config-file" then @cmd_config = Pathname.new(argv.shift)
         when "-d", "--data-directory" then @config["data_directory"] = argv.shift
+        when "-D", "--debug" then CUI.debug_mode = true
         when "-r", "--repo-url" then @config["repo_url"] = argv.shift
         else
           $stderr.puts("Invalid option #{arg}.")
@@ -192,6 +225,7 @@ EOF
       
       #Now parse the subcommand.
       command = argv.shift.to_sym
+          CUI.debug("Found subcommand #{command}.")
       sym = :"#{command.capitalize}Command"
       if CUICommands.const_defined?(sym)
         begin
@@ -210,26 +244,44 @@ EOF
     #Loads the configuration file from the <b>config/</b> directory.
     def load_config_file
       #First, load the global configuration file.
+          CUI.debug("Loading global config #{DEFAULT_CONFIG_FILE}.")
       hsh = YAML.load_file(DEFAULT_CONFIG_FILE)
+          CUI.debug(hsh)
+      
       #Second, load the user config which overrides values set in
       #the global config.
       user_config_file = Pathname.new(ENV["HOME"]) + USER_CONFIG_FILE_NAME
-      hsh.merge!(YAML.load_file(user_config_file.to_s)) if user_config_file.file?
+          CUI.debug("Loading user-level config #{user_config_file}.")
+      if user_config_file.file?
+        hsh.merge!(YAML.load_file(user_config_file.to_s))
+      else
+            CUI.debug("Not found.")
+      end
+          CUI.debug(hsh)
+      
       #Third, load the config file from the commandline, if any. This overrides
       #values set in the user and global config.
       if @cmd_config
+            CUI.debug("Loading -c option config #{@cmd_config}.")
         if @cmd_config.file?
           hsh.merge!(YAML.load_file(@cmd_config.to_s))
         else
           $stderr.puts("Configuration file #{@cmd_config} not found.")
         end
+            CUI.debug(hsh)
       end
+      
       #Fourth, check for values on the commandline. They override anything
       #set previously. They are set directly in @config, so we simply have
       #to retain the old values in it.
+          CUI.debug("Loading commandline options.")
       @config.merge!(hsh){|key, old_val, new_val| old_val}
+          CUI.debug(@config)
+      
       #Fifth, turn all keys into symbols, because that's more Ruby-like.
+          CUI.debug("Converting to symbols.")
       @config = Hash[@config.map{|k, v| [k.to_sym, v]}]
+          CUI.debug(@config)
     end
     
   end

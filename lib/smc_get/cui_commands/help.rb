@@ -33,11 +33,13 @@ EOF
       end
       
       def parse(args)
+            CUI.debug("Parsing #{args.count} args for help.")
         raise(InvalidCommandline, "Too many arguments.") if args.count > 1
         @command = args.shift #nil if not given
       end
       
       def execute
+            CUI.debug("Executing help.")
         if @command
           sym = :"#{@command.capitalize}Command"
           if CUICommands.const_defined?(sym)

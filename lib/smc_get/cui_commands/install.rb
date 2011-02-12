@@ -28,7 +28,7 @@ module SmcGet
         <<HELP
 USAGE: #$0 install [-r] PACKAGE
 
-Installs a package. 
+Installs a package.
 
 OPTIONS:
   -r\t--reinstall\tForces a reinstallation of the package.
@@ -36,6 +36,7 @@ HELP
       end
       
       def parse(args)
+            CUI.debug("Parsing #{args.count} args for install.")
         raise(InvalidCommandline, "No package given.") if args.empty?
         @reinstall = false
         
@@ -52,6 +53,7 @@ HELP
       end
       
       def execute
+            CUI.debug("Executing install.")
         pkg = Package.new(@pkg_name)
         if pkg.installed?
           if @reinstall

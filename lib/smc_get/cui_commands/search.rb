@@ -28,8 +28,8 @@ module SmcGet
         <<HELP
 USAGE: #$0 search [-a][-d][-D][-l][-L][-p][-t] QUERY
 
-Searches the local or remote repository for packages. QUERY is assumed 
-to be a regular expression. 
+Searches the local or remote repository for packages. QUERY is assumed
+to be a regular expression.
 
 OPTIONS:
   -a\t--authors\tSearch the author list.
@@ -47,6 +47,7 @@ HELP
       end
       
       def parse(args)
+            CUI.debug("Parsing #{args.count} args for search.")
         raise(InvalidCommandline, "No query given.") if args.empty?
         @search_fields = []
         @only_local = false
@@ -73,6 +74,7 @@ HELP
       end
       
       def execute
+            CUI.debug("Executing search.")
         result = SmcGet::Package.search(@query, @search_fields, @only_local)
         return 2 if result.empty?
         result.each do |pkg|
