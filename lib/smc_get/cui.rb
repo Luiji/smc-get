@@ -32,8 +32,8 @@ module SmcGet
   #have three methods: ::help, which should return a summary on how to use
   #the command (NOT print it, that's done by an internal method), #parse,
   #which gets the command-line for the subcommand passed in form of an
-  #array you should destructively (i.e. removing the elements) analyse, and
-  ##execute which finally executes the command. You are free to print out
+  #array you should destructively (i.e. removing the elements) analyse,
+  #and #execute which finally executes the command. You are free to print out
   #anything inside that method.
   #
   #Note that inside the #parse method you can set instance variables
