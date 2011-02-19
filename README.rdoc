@@ -1,17 +1,6 @@
 = SMC-GET -- level repository manager for Secret Maryo Chronicles
 smc-get - Library and command-line for managing SMC level packages.
 
-<<<<<<< HEAD
-Author::    Luiji Maryo (mailto:luiji@users.sourceforge.net)
-Copyright:: Copyright (C) 2011 Entertaining Software, Inc.
-License::   GNU General Public License (see COPYING)
-
-= Synopsis
- require 'smc-get'
- smcget = SmcGet.new
- smcget.install 'mypackage'
- smcget.uninstall 'mypackage'
-=======
 Author::      Luiji Maryo (mailto:luiji@users.sourceforge.net)
 Contributor:: Marvin Gülker (mailto:sutniuq@gmx.net)
 Copyright::   Copyright (C) 2010-2011 Entertaining Software, Inc.
@@ -38,7 +27,6 @@ License::     GNU General Public License (see COPYING)
   pkg.install
   #...or remove it.
   pkg.uninstall
->>>>>>> Quintus/devel
 
 = Description
 smc-get is a library and command-line tool for installing, uninstalling, etc.
