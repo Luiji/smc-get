@@ -22,6 +22,10 @@ module SmcGet
   
   module CUICommands
     
+    #Class for invalid command-line argument errors.
+    class InvalidCommandline < Errors::SmcGetError
+    end
+    
     #This is the superclass of all CUI commands. To make your own command,
     #subclass it an overwrite ::help, ::summary, #parse and #execute.
     class Command

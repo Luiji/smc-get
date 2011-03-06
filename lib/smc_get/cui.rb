@@ -73,10 +73,6 @@ module SmcGet
   #+help+ is quite easy to understand, so begin there.
   class CUI
     
-    #Class for invalid command-line argument errors.
-    class InvalidCommandline < Errors::SmcGetError
-    end
-    
     #Default location of the configuration file.
     DEFAULT_CONFIG_FILE = CONFIG_DIR + "smc-get.yml"
     #Name of the configuration file a user may put in his home
@@ -95,7 +91,7 @@ repository.
 COMMANDS:
 #{str = ''
 CUICommands.constants.sort.each do |c|
-  next if c == :Command
+  next if c == :Command or c == :InvalidCommandline
   str << '  ' << CUICommands.const_get(c).summary << "\n"
   end
 str}
@@ -234,7 +230,7 @@ EOF
       if CUICommands.const_defined?(sym)
         begin
           @command = CUICommands.const_get(sym).new(argv)
-        rescue InvalidCommandline => e
+        rescue CUICommands::InvalidCommandline => e
           $stderr.puts(e.message)
           $stderr.puts("Try #$0 help.")
           exit 1
