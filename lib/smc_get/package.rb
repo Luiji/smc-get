@@ -184,8 +184,9 @@ module SmcGet
     # how many percent of the files have already been deleted for the current package
     # part.
     def uninstall
+      package_file = SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml"
       begin
-        pkgdata = YAML.load_file(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml")
+        pkgdata = YAML.load_file(package_file)
       rescue Errno::ENOENT
         raise(Errors::NoSuchPackageError.new(@name), "ERROR: Local package not found: #{@name}.")
       end
@@ -203,7 +204,27 @@ module SmcGet
         end
       end
       
-      File.delete(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml")
+      #Delete the package file
+      File.delete(package_file)
+      
+      #Delete the directories the package file was placed in IF THEY'RE EMPTY.
+      rel_dir, file = package_file.relative_path_from(SmcGet.datadir + PACKAGE_SPECS_DIR).split
+      #rel_dir now holds the path difference between the package directory
+      #and the package spec file. If it is ".", no further dirs have been
+      #introduced.
+      return if rel_dir == Pathname.new(".")
+      #For simplifying the deletion procedure, we change the working directory
+      #to the package spec dir. Otherwise we'd have to keep track of both
+      #the absolute and relative paths, this way just of the latter.
+      Dir.chdir(SmcGet.datadir.join(PACKAGE_SPECS_DIR).to_s) do
+        #Remove from the inmost to the outmost directory, so that
+        #empty directories contained in directories just containg that
+        #empty directory don't get prohibited from deletion.
+        rel_dir.ascend do |dir|
+          dir.rmdir if dir.children.empty?
+        end
+      end
+      
     end
     
     #Returns true if the package is installed locally. Returns false
