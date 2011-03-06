@@ -106,7 +106,7 @@ module SmcGet
         #a bit more performant if I don't have to strip off the relative
         #prefix of the filenames (which are the names of the packages + .yml).
         Dir.chdir(specs_dir.to_s) do
-          Dir.glob("*.yml").map{|filename| new(filename.match(/\.yml$/).pre_match)}
+          Dir.glob("**/*.yml").map{|filename| new(filename.match(/\.yml$/).pre_match)}
         end
       end
       
