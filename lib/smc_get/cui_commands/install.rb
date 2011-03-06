@@ -26,9 +26,9 @@ module SmcGet
       
       def self.help
         <<HELP
-USAGE: #{File.basename($0)} install [-r] PACKAGE
+USAGE: #{File.basename($0)} install [-r] PACKAGES
 
-Installs a package.
+Installs one or more packages.
 
 OPTIONS:
   -r\t--reinstall\tForces a reinstallation of the package.
@@ -36,50 +36,52 @@ HELP
       end
       
       def self.summary
-        "install\tInstall a package."
+        "install\tInstall one or more packages."
       end
       
       def parse(args)
             CUI.debug("Parsing #{args.count} args for install.")
         raise(InvalidCommandline, "No package given.") if args.empty?
         @reinstall = false
+        @pkg_names = []
         
-        while args.count > 1
+        until args.empty?
           arg = args.shift
           case arg
           when "--reinstall", "-r" then @reinstall = true
           else
-            raise(InvalidCommandline, "Invalid argument #{arg}.")
+            @pkg_names << arg
+            $stderr.puts("Unknown argument #{arg}. Treating it as a package.") if arg.start_with?("-")
           end
         end
-        #The last command-line arg is the package
-        @pkg_name = args.shift
       end
       
       def execute(config)
             CUI.debug("Executing install.")
-        pkg = Package.new(@pkg_name)
-        if pkg.installed?
-          if @reinstall
-            puts "Reinstalling #{pkg}."
-          else
-            puts "Already installed. Nothing to do, maybe you want --reinstall?."
-            return
+        @pkg_names.each do |pkg_name|
+          pkg = Package.new(pkg_name)
+          if pkg.installed?
+            if @reinstall
+              puts "Reinstalling #{pkg}."
+            else
+              puts "#{pkg} is already installed. Maybe you want --reinstall?."
+              next
+            end
           end
-        end
-        puts "Installing #{pkg}."
-        #Windows doesn't understand ANSI escape sequences, so we have to
-        #use the carriage return and reprint the whole line.
-        base_str = "\rDownloading %s... (%.2f%%)"
-        pkg.install(config[:max_tries]) do |filename, percent_filename, retrying|
-          if retrying
-            puts "#{retrying.message} Retrying."
-          else
-            print "\r", " " * 80 #Clear everything written before
-            printf(base_str, filename, percent_filename)
+          puts "Installing #{pkg}."
+          #Windows doesn't understand ANSI escape sequences, so we have to
+          #use the carriage return and reprint the whole line.
+          base_str = "\rDownloading %s... (%.2f%%)"
+          pkg.install(config[:max_tries]) do |filename, percent_filename, retrying|
+            if retrying
+              puts "#{retrying.message} Retrying."
+            else
+              print "\r", " " * 80 #Clear everything written before
+              printf(base_str, filename, percent_filename)
+            end
           end
+          puts
         end
-        puts
       end
       
     end

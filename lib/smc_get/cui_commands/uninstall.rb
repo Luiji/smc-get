@@ -26,41 +26,48 @@ module SmcGet
       
       def self.help
         <<EOF
-#{File.basename($0)} uninstall PACKAGE
+#{File.basename($0)} uninstall PACKAGES
 
-Removes PACKAGE from your set of downloaded packages.
+Removes PACKAGES from your set of downloaded packages.
 EOF
       end
       
       def self.summary
-        "uninstall\tUninstall a package."
+        "uninstall\tUninstalls one or more packages."
       end
       
       def parse(args)
             CUI.debug("Parsing #{args.count} args for uninstall.")
         raise(InvalidCommandline, "No package given.") if args.empty?
-        while args.count > 1
+        @pkg_names = []
+        until args.empty?
           arg = args.shift
           #case arg
           #when "-c", "--my-arg" then ...
           #else
-          raise(InvalidCommandline, "Invalid argument #{arg}.")
+          @pkg_names << arg
+          $stderr.puts("Unkown argument #{arg}. Treating it as a package.") if arg.start_with?("-")
           #end
         end
-        #The last command-line arg is the package
-        @pkg_name = args.shift
       end
       
       def execute(config)
             CUI.debug("Executing uninstall.")
-        pkg = Package.new(@pkg_name)
-        puts "Uninstalling #{pkg}."
-        #Windows doesn't understand ANSI escape sequences, so we have to
-        #use the carriage return and reprint the whole line.
-        base_str = "\rRemoving %s... (%.2f%%)"
-        pkg.uninstall do |part, percent_part|
-          print "\r", " " * 80 #Clear everything written before
-          printf(base_str, part, percent_part)
+        @pkg_names.each do |pkg_name|
+          pkg = Package.new(pkg_name)
+          puts "Uninstalling #{pkg}."
+          unless pkg.installed?
+            $stderr.puts "#{pkg} is not installed. Skipping."
+            next
+          end
+          #Windows doesn't understand ANSI escape sequences, so we have to
+          #use the carriage return and reprint the whole line.
+          base_str = "\rRemoving %s... (%.2f%%)"
+          pkg.uninstall do |part, percent_part|
+            print "\r", " " * 80 #Clear everything written before
+            printf(base_str, part, percent_part)
+          end
+          puts
         end
       end
       
