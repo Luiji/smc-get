@@ -60,6 +60,8 @@ module SmcGet
   #The name of the file containing the list of all levels in the
   #repository.
   PACKAGE_LIST_FILE = "#{PACKAGE_SPECS_DIR}/packages.lst".freeze
+  #The version of smc-get.
+  VERSION = Pathname.new(__FILE__).dirname.expand_path.join("..", "..", "VERSION.txt").read.chomp
   
   class << self
     
