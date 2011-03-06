@@ -22,6 +22,9 @@ require "rake"
 gem "rdoc", ">= 3.4" #Ruby's builtin RDoc is unusable
 require "rdoc/task"
 require "rake/testtask"
+require "rake/gempackagetask"
+
+load "smc-get.gemspec"
 
 Rake::RDocTask.new do |rd|
   rd.rdoc_files.include("lib/**/*.rb", "**/*.rdoc")
@@ -35,3 +38,5 @@ Rake::TestTask.new do |t|
   t.pattern = "test/test_*.rb"
   t.warning = true
 end
+
+Rake::GemPackageTask.new(GEMSPEC).define
