@@ -21,7 +21,7 @@ DESCRIPTION
     "COPYING", "README.rdoc", "VERSION.txt"].flatten
   spec.executables = ["smc-get"]
   spec.has_rdoc = true
-  spec.extra_rdoc_files = %w[README.rdoc COPYING]
+  spec.extra_rdoc_files = %w[README.rdoc smcpak.rdoc COPYING]
   spec.rdoc_options << "-t" << "smc-get RDocs" << "-m" << "README.rdoc"
   spec.test_files = Dir["test/test_*.rb"]
   spec.homepage = "https://github.com/Luiji/smc-get"

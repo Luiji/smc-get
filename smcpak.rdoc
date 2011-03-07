@@ -1,0 +1,173 @@
+= Secret Maryo Chronicles Package specification
+
+This file describes how Secret Maryo Chronicles Packages are defined.
+They allow for easy deployment and uploading to the
+{Secret Maryo Chronicles Contributed Levels Repository}[https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels].
+
+== General
+
+* The files have the extension <tt>.smcpak</tt>.
+* The files are gzip-compressed tarballs.
+* The filename may not contain whitespace.
+
+== File format
+
+  mypackage.smcpak/
+    - README.txt
+    - spec.yml
+    levels/
+      - Level1.smclvl
+      - Level1_sublevel.smclvl
+      - Levelsetname_01Level1.smclvl
+      - Levelsetname_01Level1_sublevel.smclvl
+    worlds/
+      world1/
+        - description.xml
+        - layer.xml
+        - world.xml
+    pixmaps/
+      - graphic1.png
+      - graphic2.png
+    sounds/
+      - sound1.ogg
+      - sound2.ogg
+    music/
+      - music1.ogg
+      - music2.ogg
+
+== Levels format
+
+* A Level must be named after one of the following conventions:
+
+[Levelname.smclvl] This is the simplest way to name a level. If your
+                   package just contains one level or several ones that aren't
+                   related to each other, use this convention.
+[Level1_sublevel.smclvl] Same as the previous convention, but your levels
+                         have sublevels. Prefix the sublevel with the
+                         main level's name and an underscore.
+[Levelsetname_xxLevel1.smclvl] This is the convention you want to use if you
+                               have multiple levels related to each other, e.g.
+                               they just follow one another or are combined
+                               in an overworld. Prefix the levels' names with
+                               the levelset's name, an underscore, and then
+                               a 2-digit number indicating in which order
+                               the levels should be played.
+[Levelsetname_xxLevel1_sublevel.smclvl] The same as the previous convention,
+                                        but the levels have sublevels. Just
+                                        append an underscore to the previous
+                                        convention, then put the sublevel's
+                                        name.
+
+* None of the conventions allows for whitespace in the level names. Use
+  underscores if necessary.
+
+== Worlds format
+
+* We don't have any assumptions about how you name your worlds, but
+* do not use whitespace in their names.
+
+== Graphics format
+
+* Graphics are in the PNG (Portable Network Graphics) format.
+* Their names don't contain whitespace.
+* They may reside in subfolders.
+
+== Sounds and music format
+
+* They are in OGG (OGG Theora) format.
+* Their names don't contain whitespace.
+* They may reside in subfolders.
+
+== README.txt format
+
+* The filename is always <tt>README.txt</tt>.
+* Don't offense anybody in your README.
+* Everything else is up to you.
+
+== spec.yml format
+
+This is the main file of the package. It is called the "package specification",
+and you should pay close attention to it.
+
+* The file is in YAML format (Yet Another Markup Language).
+* The filename is always <tt>spec.yml</tt>.
+
+The general structure is as follows:
+
+=== Package specification structure
+
+  ---
+  title: "TITLE OF YOUR PACKAGE"
+  authors:
+    - Author1
+    - Author2
+  difficulty: "DIFFICULTY"
+  dependencies:
+    - package1
+    - package2
+  description: >
+    An arbitrary long description of your package that can
+    span multiple lines.
+  install_message: >
+    A message to print to the terminal after the package has been installed.
+    It may span multiple lines and you're free to ommit this option at all.
+  remove_message: >
+    A message to print to the terminal after the package has been removed.
+    It may span multiple lines and you're free to ommit this option at all.
+
+* The +title+ may not be longer than 80 characters. It can contain whitespace.
+  This field is mandatory.
+* The list of +authors+ can be arbitrary long, but must contain at least
+  one entry. This field is mandatory.
+* The +difficulty+ can be anything you like, but we encourage you to use
+  one of the following ones:
+  * easy
+  * medium
+  * hard
+  * unknown
+* You *have* to put +difficulty+, even if you just put +unknown+ as the value.
+* The +dependencies+ list contains of an arbitrary long list of package names
+  that have to be installed before this package can be installed. Use this
+  sparingly, because users don't want to end up with 100 packages be installed
+  for a single one. If possible, ommit it at all.
+* The +descripton+ field is mandatory. It contains a multiline description
+  of what this package contains.
+* The +install_message+ field is optional. See the above figure for further
+  explanation.
+* The +remove_message+ field is optional. See the above figure for further
+  explanation.
+
+The multiline fields can have to different formats that affect how
+newlines are treated. The first format you already saw is this one:
+
+  desc: >
+    Newlines that are placed here, like the following
+    do not show up in the output.
+
+Note that the output won't have a newline after the world "following". The
+second form is this one:
+
+  desc: |
+    Newlines that are placed here, like the following
+    do show up in the output.
+
+This time the output will have a newline after the word "following". We don't
+recommand one form over the other, but keep in mind that using the first
+form may better fit large terminals, whereas the second form allows you
+to prevent cutting words in the middle for line breaking (assuming a
+standard 80-characters wide terminal).
+
+== About versions and updates
+
+<tt>smc-get</tt> doesn't have a concept of versions. During install,
+<tt>smc-get</tt> writes the installation date into a special file, allowing
+you to alter the levels downloaded without corruputing it's date. Then, when
+you run <tt>smc-get update</tt>, <tt>smc-get</tt> checks wheather the
+modification times of the package files in the repository are newer than
+the installation date it remembered previously. If it finds one or more
+packages that fulfill this requirement, they will be uninstalled and the
+newer package will be downloaded and installed. If <tt>smc-get</tt> detects
+changes have been made to the levels contained in the package, it will
+ask you if you want to lose them by overwriting the levels with the new
+version from the repository, or if the modified level should be moved to
+a new file with the name <tt>levelname.MODIFIED.smclvl</tt>.
