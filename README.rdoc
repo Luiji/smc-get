@@ -133,8 +133,8 @@ configuration file by placing the appropriate option in ARGV:
 
 = License
 
-smc-get is licensed under the GNU General Public License. For more information,
-see COPYING.
+smc-get is licensed under the GNU General Public License version 3 or later. For
+more information, see COPYING.
 
 = Website
 
