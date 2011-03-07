@@ -8,7 +8,7 @@ levels repository. You can install, remove and list the
 levels you have installed and search for new ones that
 are available online.
 DESCRIPTION
-  spec.version = File.read("VERSION.txt").chomp
+  spec.version = File.readlines("VERSION.txt").first.chomp.sub("-", ".")
   spec.author = "Luiji Maryo"
   spec.email = "luiji@users.sourceforge.net"
   spec.platform = Gem::Platform::RUBY

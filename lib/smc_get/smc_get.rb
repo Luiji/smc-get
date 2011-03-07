@@ -23,7 +23,7 @@ require 'tempfile'
 require "fileutils"
 begin
   require "psych"
-  YAML = Psych
+  YAML = Psych unless defined?(YAML)
 rescue LoadError
   require 'yaml'
 end
@@ -61,7 +61,15 @@ module SmcGet
   #repository.
   PACKAGE_LIST_FILE = "#{PACKAGE_SPECS_DIR}/packages.lst".freeze
   #The version of smc-get.
-  VERSION = Pathname.new(__FILE__).dirname.expand_path.join("..", "..", "VERSION.txt").read.chomp
+  Pathname.new(__FILE__).dirname.expand_path.join("..", "..", "VERSION.txt").read.match(/\A(\d+)\.(\d+)\.(\d+)(\-.*?)?\n(.*?)\n(.*?)\Z/)
+  VERSION = {
+    :mayor => $1.to_i,
+    :minor => $2.to_i,
+    :tiny => $3.to_i,
+    :dev => $4,
+    :date => $5,
+    :commit => $6
+  }
   
   class << self
     
@@ -86,6 +94,17 @@ module SmcGet
     def setup(repo_url, datadir)
       @repo_url = repo_url
       @datadir = Pathname.new(datadir)
+      VERSION.freeze #Nobody changes this after initializing anymore!
+    end
+    
+    #Returns smc-get's version by concatenating the VERSION constant's
+    #values in a sensible mannor. Return value is a string of form
+    #  mayor.minor.tiny[-dev|-rc|-beta1|...] (<date>, commit <commit_num>)
+    def version
+      str = "#{VERSION[:mayor]}.#{VERSION[:minor]}.#{VERSION[:tiny]}"
+      str << VERSION[:dev] if VERSION[:dev]
+      str << " (#{VERSION[:date]}, commit #{VERSION[:commit]})"
+      str
     end
     
     # Download the specified raw file from the repository to the specified

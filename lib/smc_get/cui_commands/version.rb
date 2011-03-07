@@ -41,10 +41,10 @@ EOF
       end
       
       def execute(config)
-        puts "This is #{File.basename($0)}, version #{VERSION}."
+        puts "This is #{File.basename($0)}, version #{SmcGet.version}."
         puts
-        puts "#{File.basename($0)}  Copyright (C) 2010-2011  Luiji Maryo"
-        puts "#{File.basename($0)}  Copyright (C) 2011  Marvin Gülker"
+        puts "#{File.basename($0)} Copyright (C) 2010-2011  Luiji Maryo"
+        puts "#{File.basename($0)} Copyright (C) 2011  Marvin Gülker"
         puts "This program comes with ABSOLUTELY NO WARRANTY."
         puts "This is free software, and you are welcome to redistribute it"
         puts "under certain conditions; see the COPYING file for information."
