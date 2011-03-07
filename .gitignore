@@ -9,3 +9,6 @@
 
 # Ignore temporary files
 /tmp
+
+# Ignore generated Gems and other release files
+/pkg
