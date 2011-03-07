@@ -81,7 +81,7 @@ They allow for easy deployment and uploading to the
 == README.txt format
 
 * The filename is always <tt>README.txt</tt>.
-* Don't offense anybody in your README.
+* Don't offend anybody in your README.
 * Everything else is up to you.
 
 == spec.yml format
