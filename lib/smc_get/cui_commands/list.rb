@@ -46,7 +46,7 @@ EOF
       end
       
       def execute(config)
-        CUI.debug("Executing help.")
+        CUI.debug("Executing list.")
         if Package.installed_packages.empty?
           puts "No packages installed."
         else
