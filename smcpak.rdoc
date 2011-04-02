@@ -1,13 +1,13 @@
 = Secret Maryo Chronicles Package specification
 
 This file describes how Secret Maryo Chronicles Packages are defined.
-They allow for easy deployment and uploading to the
-{Secret Maryo Chronicles Contributed Levels Repository}[https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels].
+They allow for easy deployment and uploading to an online repository which
+we have not yet created, but are going to do soon!
 
 == General
 
 * The files have the extension <tt>.smcpak</tt>.
-* The files are gzip-compressed tarballs.
+* The files are xz-compressed tarballs.
 * The filename may not contain whitespace.
 
 == File format
@@ -137,7 +137,7 @@ The general structure is as follows:
 * The +remove_message+ field is optional. See the above figure for further
   explanation.
 
-The multiline fields can have to different formats that affect how
+The multiline fields can have two different formats that affect how
 newlines are treated. The first format you already saw is this one:
 
   desc: >
@@ -161,7 +161,7 @@ standard 80-characters wide terminal).
 
 <tt>smc-get</tt> doesn't have a concept of versions. During install,
 <tt>smc-get</tt> writes the installation date into a special file, allowing
-you to alter the levels downloaded without corruputing it's date. Then, when
+you to alter the levels downloaded without corrupting it's date. Then, when
 you run <tt>smc-get update</tt>, <tt>smc-get</tt> checks wheather the
 modification times of the package files in the repository are newer than
 the installation date it remembered previously. If it finds one or more
@@ -171,3 +171,16 @@ changes have been made to the levels contained in the package, it will
 ask you if you want to lose them by overwriting the levels with the new
 version from the repository, or if the modified level should be moved to
 a new file with the name <tt>levelname.MODIFIED.smclvl</tt>.
+
+== Repositories
+
+The main repository's URL is not clear as of now (2nd April 2011), but is
+likely to be somewhere on Sourceforge.net. This is the repository
+<tt>smc-get</tt> accesses by default, and you'll find that it contains only
+the compressed packages. If you want to download individual files bypassing
+<tt>smc-get</tt>, you can have a look at the "source repository" at
+https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels . All
+files contained in that repository are collected and compressed to packages
+by means of an automated process (hopefully) and then uploaded to the main
+repository at sourceforge.
+
