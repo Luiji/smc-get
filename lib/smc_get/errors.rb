@@ -66,7 +66,7 @@ module SmcGet
     # Raised when a package call is made but one of the resources of the
     # specified package is missing.
     class NoSuchResourceError < SmcGetError
-      # The type of resource (should be either :music, :graphic, or :level).
+      # The type of resource (should be either :music, :graphic, :level or :spec).
       attr_reader :resource_type
       # The name of the resource (i.e. mylevel.lvl or Stuff/Cheeseburger.png).
       attr_reader :resource_name
@@ -92,6 +92,12 @@ module SmcGet
       def is_level?
         @resource_type == :level
       end
+      
+      # Returns true if the resource type is :spec. False otherwise.
+      def is_spec?
+        @resource_type == :spec
+      end
+      
     end
     
     # Raised when a call to download() fails.
@@ -107,6 +113,26 @@ module SmcGet
     
     #Raised when SmcGet.download timed out.
     class ConnectionTimedOutError < DownloadFailedError
+    end
+    
+    #Raised if a package is damaged or malformed.
+    class BrokenPackageError < SmcGetError
+    end
+    
+    #Raised if a package specification file contains rubbish.
+    class InvalidSpecification < BrokenPackageError
+    end
+    
+    #Raised when a repository wasn’t found or contains structure errors.
+    class InvalidRepository < SmcGetError
+      
+      #The URL of the repository.
+      attr_reader :repository_uri
+      
+      def initialize(repository_uri)
+        @repository_uri = repository_uri
+      end
+      
     end
     
   end

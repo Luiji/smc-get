@@ -21,6 +21,7 @@
 require "pathname"
 require 'tempfile'
 require "fileutils"
+require "tempfile"
 begin
   require "psych"
   YAML = Psych unless defined?(YAML)
@@ -28,9 +29,17 @@ rescue LoadError
   require 'yaml'
 end
 require 'uri'
+require "open-uri"
 require 'net/https'
+require "archive/tar/minitar"
+require "xz"
 
 require_relative "./errors"
+require_relative "./repository"
+require_relative "./local_repository"
+require_relative "./remote_repository"
+require_relative "./package_archive"
+require_relative "./package_specification"
 require_relative "./package"
 
 #This is the main module of smc-get and it's namespace.
@@ -73,13 +82,7 @@ module SmcGet
   
   class << self
     
-    #The URL of the repository.
-    attr_reader :repo_url
-    #The directory where SMC is installed.
-    attr_reader :datadir
-    
-    @repo_url = nil
-    @datadir = nil
+    attr_reader :temp_dir
     
     #Initializes the library. Pass in the URL from which you want
     #to downloaded packages (most likely Luiji's contributed level
@@ -91,9 +94,9 @@ module SmcGet
     #
     #You may call this method more than once if you want to reinitialize
     #the library to use other resources.
-    def setup(repo_url, datadir)
-      @repo_url = repo_url
-      @datadir = Pathname.new(datadir)
+    def setup
+      @temp_dir = Pathname.new(Dir.mktmpdir("smc-get"))
+      at_exit{@temp_dir.rmtree}
       VERSION.freeze #Nobody changes this after initializing anymore!
     end
     
@@ -105,52 +108,6 @@ module SmcGet
       str << VERSION[:dev] if VERSION[:dev]
       str << " (#{VERSION[:date]}, commit #{VERSION[:commit]})"
       str
-    end
-    
-    # Download the specified raw file from the repository to the specified
-    # output file.  URL should be everything in the URL after
-    # SmcGet.repo_url.
-    # Yields the currently downloaded file and how many percent of that file have
-    # already been downloaded if a block is given.
-    def download(url, output) # :nodoc:
-      Errors::LibraryNotInitialized.throw_if_needed!
-      # Make url friendly.
-      url = URI::Parser.new.escape(url)
-      # Create directories if needed.
-      FileUtils.mkdir_p(File.dirname(output))
-      # Download file.
-      File.open(output, "w") do |outputfile|
-        uri = URI.parse(@repo_url + url)
-        
-        request = Net::HTTP.new(uri.host, uri.port)
-        request.use_ssl = true #GitHub uses SSL
-        
-        begin
-          request.start do
-            #1. Establish connection
-            request.request_get(uri.path) do |response|
-              raise(Errors::DownloadFailedError.new(url), "ERROR: Received HTTP error code #{response.code}.") unless response.code == "200"
-              #2. Get what size the file is
-              final_size = response.content_length
-              current_size = 0
-              #Ensure the first value the user sees are 0%
-              yield(url, 0) if block_given?
-              #3. Get the actual file in parts and report percent done.
-              response.read_body do |part|
-                outputfile.write(part)
-                
-                current_size += part.size
-                percent = (current_size.to_f / final_size.to_f) * 100
-                yield(url, percent) if block_given?
-              end
-            end
-            #Ensure the last value the user sees are 100%
-            yield(url, 100) if block_given?
-          end
-        rescue Timeout::Error
-          raise(Errors::ConnectionTimedOutError.new(url), "ERROR: Connection timed out.")
-        end
-      end
     end
     
   end

@@ -1,280 +1,168 @@
 #Encoding: UTF-8
-################################################################################
-# This file is part of smc-get.
-# Copyright (C) 2010-2011 Entertaining Software, Inc.
-# Copyright (C) 2011 Marvin Gülker
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-################################################################################
 
 module SmcGet
   
-  #An object of this class represents a package. Wheather it is installed or
-  #not, doesn't matter (call #installed? to find out), but everything you
-  #want to manage your packages can be found here. For example, to install
-  #a remote package, do:
-  #  pkg = SmcGet::Package.new("mypackage")
-  #  pkg.install
-  #Don't forget to set up smc-get before you use the library:
-  #  require "smc_get/"
-  #  SmcGet.setup(
-  #    "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/",
-  #    "dir/where/you/hava/smc/installed"
-  #  end
+  #An object of this class represents a local or remote package that is
+  #compressed in the .smcpak format (described in the smcpak.rdoc file). A
+  #package is considered to be a local one if it isn’t associated with any
+  #repository, i.e. it’s +package_location+ attribute is no instance of one
+  #of the Repository classes (note here: Local repositories are repositories
+  #too, and this means a package installed in a local repository will be
+  #considered remote). When you create a Package via the
+  #from_repository class method, the specification file you passed to
+  #the method will be downloaded if the repository is of class RemoteRepository.
+  #Local repositories of course don’t cause any network traffic.
   class Package
     
-    #The package specification file for this packages. This file may not
-    #exist if the package is not installed. This is a Pathname object.
-    attr_reader :spec_file
-    #The name of this package.
-    attr_reader :name
+    #A package name is considered valid if it matches this Regular
+    #expression.
+    VALID_PKG_NAME = /^[a-zA-Z_0-9]+$/
+    
+    LEVELS_DIR   = "levels"
+    MUSIC_DIR    = "music"
+    SOUNDS_DIR   = "sounds"
+    GRAPHICS_DIR = "pixmaps"
+    WORLDS_DIR   = "worlds"
+    
+    #The PackageSpecification of this package.
+    attr_reader :spec
+    #Either the Repository in which the package is contained, or the
+    #Pathname of a bare .smcpak file.
+    attr_reader :location
     
     class << self
       
-      #Searches through the package repostitory and returns an array
-      #of matching package objects.
-      #
-      #Pass in the regular expression to search for (or a string, which
-      #then is treated as a regular expression without anchors), the
-      #keys of the specification to search through as an array of symbols,
-      #and wheather you want to query only locally installed packages (by
-      #default, only remote packages are searched).+query_fields+ indicates
-      #which fields of the package specification shall be searched. You can
-      #pass them as an array of symbols. +only_local+ causes smc-get to
-      #do a local search instead of a remote one.
-      #
-      #With solely :pkgname specified, just the specifications for the packages
-      #whose package file names match +regexp+ are downloaded, causing a
-      #massive speedup.
-      def search(regexp, query_fields = [:pkgname], only_local = false)
-        regexp = Regexp.new(Regexp.escape(regexp)) if regexp.kind_of? String
-        ary = []
+      #Creates a new Package from the name of a package
+      #specification file and the repository in which it resides.
+      #The specification file will be downloaded into a temporary directory, but
+      #not the whole package of course.
+      def from_repository(repository, spec_file)
+        path = repository.kind_of?(LocalRepository) ? spec_file : repository.fetch_spec(spec_file, SmcGet.temp_dir)
+        new(path, repository)
+      end
       
-        list = if only_local
-          Errors::LibraryNotInitialized.throw_if_needed!
-          installed_packages.map(&:name)
-        else
-          Tempfile.open("smc-get") do |listfile|
-            SmcGet.download(PACKAGE_LIST_FILE, listfile.path)
-            listfile.readlines.map(&:chomp)
-          end
-        end
+      #Creates a new Package from a local .smcpak file.
+      def from_file(file)
+        pkg_name = File.basename(file).sub(/\.smcpak$/, "")
+        path = PackageArchive.new(file).decompress(SmcGet.temp_dir) + pkg_name + "#{pkg_name}.yml"
+        new(path, file)
+      end
       
-        list.each do |pkg_name|
-          pkg = Package.new(pkg_name)
-          #If the user wants to query just the pkgname, we can save
-          #much time by not downloading all the package specs.
-          if query_fields == [:pkgname]
-            ary << pkg if pkg_name =~ regexp
-          else
-            spec = only_local ? pkg.spec : pkg.getinfo
-            query_fields.each do |field|
-              if field == :pkgname #This field is not _inside_ the spec.
-                ary << pkg if pkg_name =~ regexp
-              else
-                #First to_s: Convert Symbol to string used in the specs.
-                #Second to_s: Ensure array values such as "author" are
-                #             handled correctly.
-                ary << pkg if spec[field.to_s].to_s =~ regexp
-              end
+      #Validates +directory+ against the packaging guidelines, compresses it
+      #into a .smcpak file and finally returns a (local) Package
+      #object wrapping the file. The .smcpak file is placed in the parent
+      #directory of +directory+, you should therefore ensure you have write
+      #permissions for it.
+      def create(directory)
+        #0. Determine the names of the important files
+        directory = Pathname.new(directory)
+        pkg_name = directory.basename.to_s
+        spec_file = directory + "#{pkg_name}.yml"
+        readme = directory + "README.txt"
+        smcpak_file = directory.parent + "#{pkg_name}.smcpak"
+        
+        #1. Validate the package name
+        raise(Errors::BrokenPackageError, "Invalid package name!") unless pkg_name =~ VALID_PKG_NAME
+        
+        #2. Validate the package spec
+        spec = PackageSpecification.from_file(spec_file) #Raises if necessary
+        
+        #3. Validate the rest of the structure
+        $stderr.puts("Warning: No README.txt found.") unless readme.file?
+        $stderr.puts("Warning: No levels found.") if spec.levels.empty?
+        
+        #4. Compress the whole thing
+        #The process is as follows: A temporary directory is created, in which
+        #a subdirectory that is named after the package is created. The
+        #spec, the README and the levels, music, etc. are then copied into
+        #that subdirectory which in turn is then compressed. The resulting
+        #.smcpak file is copied back to the original directory’s parent dir.
+        #After that, the mktmpdir block ends and deletes the temporary
+        #directory.
+        path = Dir.mktmpdir("smc-get-create-#{pkg_name}") do |tmpdir|
+          goal_dir = Pathname.new(tmpdir) + pkg_name
+          goal_dir.mkdir
+          
+          FileUtils.cp(spec_file, goal_dir)
+          FileUtils.cp(readme, goal_dir)
+          [:levels, :graphics, :music, :sounds, :worlds].each do |sym|
+            #4.1. Create the group’s subdir
+            dirname = const_get(:"#{sym.upcase}_DIR")
+            goal_group_dir = goal_dir + dirname
+            goal_group_dir.mkdir
+            #4.2. Copy all the group’s files over to it
+            spec[sym].each do |filename|
+              FileUtils.cp(directory + dirname + filename, goal_group_dir)
             end
           end
+          #4.3. actual compression
+          PackageArchive.compress(goal_dir, smcpak_file).path
         end
-        ary
-      end
-      
-      #Returns a list of all currently installed packages as an array of
-      #Package objects.
-      def installed_packages
-        Errors::LibraryNotInitialized.throw_if_needed!
-        specs_dir = SmcGet.datadir + PACKAGE_SPECS_DIR
-        specs_dir.mkpath unless specs_dir.directory?
-        
-        #We need to chdir here, because Dir.glob returns the path
-        #relative to the current working directory and it should be
-        #a bit more performant if I don't have to strip off the relative
-        #prefix of the filenames (which are the names of the packages + .yml).
-        Dir.chdir(specs_dir.to_s) do
-          Dir.glob("**/*.yml").map{|filename| new(filename.match(/\.yml$/).pre_match)}
-        end
+        #5. Return a new instance of Package
+        from_file(path)
       end
       
     end
     
-    #Creates a new package object from it's name. This doesn't do anything,
-    #especially it doesn't install the package. It just creates an object for
-    #you you can use to inspect or install pacakges. It doesn't even check if
-    #the package name is valid.
-    def initialize(package_name)
-      Errors::LibraryNotInitialized.throw_if_needed!
-      @name = package_name
-      @spec_file = SmcGet.datadir.join(PACKAGE_SPECS_DIR, "#{@name}.yml")
+    #Creates a new Package from the given specification file. The
+    #+pkg_location+ can either be a string or Pathname (creating a local
+    #package) or a Repository object (either RemoteRepository or
+    #LocalRepository, causing a remote package). You shouldn’t use this method
+    #directly, because you would have to download the specification file
+    #manually when creating a remote package, so stick to the from_file and
+    #from_repository class methods.
+    def initialize(spec_file, pkg_location)
+      @spec = PackageSpecification.from_file(spec_file)
+      @location = pkg_location
     end
     
-    # Install a package from the repository. Yields the name of the file
-    # currently being downloaded, how many percent of that
-    # file have already been downloaded and wheather or not this is a retry (if
-    # so, the exception object is yielded, otherwise false).
-    # The maximum number of retries is specified via the +max_tries+ parameter.
-    def install(max_tries = 3) # :yields: file, percent_file, retrying
-      try = 1 #For avoiding retrying infinitely
-      begin
-        SmcGet.download("packages/#{@name}.yml", SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml") do |file, percent_done|
-          yield(file, percent_done, false) if block_given?
-        end
-      rescue Errors::DownloadFailedError => e
-        if try > max_tries
-          File.delete(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml") #There is an empty file otherwise
-          if e.class == Errors::ConnectionTimedOutError
-            raise #Bubble up
-          else
-            raise(Errors::NoSuchPackageError.new(@name), "ERROR: Package not found in the repository: #{@name}.")
-          end
-        else
-          try += 1
-          yield(e.download_url, 0, e) if block_given?
-          retry
-        end
-      end
-      
-      pkgdata = YAML.load_file(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml")
-      package_parts = [["levels", :level], ["music", :music], ["graphics", :graphic]]
-      
-      package_parts.each_with_index do |ary, i|
-        part, sym = ary
-        try = 1
-        
-        if pkgdata.has_key?(part)
-          pkgdata[part].each do |filename|
-            begin
-              SmcGet.download("#{part}/#{filename}", SmcGet.datadir + SmcGet.const_get(:"PACKAGE_#{part.upcase}_DIR") + filename) do |file, percent_done|
-                yield(file, percent_done, false) if block_given?
-              end
-            rescue Errors::DownloadFailedError => e
-              if try > max_tries
-                if e.class == Errors::ConnectionTimedOutError
-                  raise #Bubble up
-                else
-                  raise(Errors::NoSuchResourceError.new(sym, error.download_url), "ERROR: #{sym.capitalize} not found in the repository: #{filename}.")
-                end
-              else
-                try += 1
-                yield(e.download_url, 0, e) if block_given?
-                retry
-              end #if try > max_tries
-            end #begin
-          end #each part
-        end #has_key?
-      end #each part and sym
-    end #install
-    
-    # Uninstall a package from the local database. If a block is given,
-    # it is yielded the package part currently being deleted and
-    # how many percent of the files have already been deleted for the current package
-    # part.
-    def uninstall
-      package_file = SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml"
-      begin
-        pkgdata = YAML.load_file(package_file)
-      rescue Errno::ENOENT
-        raise(Errors::NoSuchPackageError.new(@name), "ERROR: Local package not found: #{@name}.")
-      end
-      
-      %w[music graphics levels].each_with_index do |part, part_index|
-        if pkgdata.has_key? part
-          total_files = pkgdata[part].count
-          pkgdata[part].each_with_index do |filename, index|
-            begin
-              File.delete(SmcGet.datadir + SmcGet.const_get("PACKAGE_#{part.upcase}_DIR") + filename)
-            rescue Errno::ENOENT
-            end
-            yield(part, ((index + 1) / total_files) * 100) if block_given? #+1, because index is 0-based
-          end
-        end
-      end
-      
-      #Delete the package file
-      File.delete(package_file)
-      
-      #Delete the directories the package file was placed in IF THEY'RE EMPTY.
-      rel_dir, file = package_file.relative_path_from(SmcGet.datadir + PACKAGE_SPECS_DIR).split
-      #rel_dir now holds the path difference between the package directory
-      #and the package spec file. If it is ".", no further dirs have been
-      #introduced.
-      return if rel_dir == Pathname.new(".")
-      #For simplifying the deletion procedure, we change the working directory
-      #to the package spec dir. Otherwise we'd have to keep track of both
-      #the absolute and relative paths, this way just of the latter.
-      Dir.chdir(SmcGet.datadir.join(PACKAGE_SPECS_DIR).to_s) do
-        #Remove from the inmost to the outmost directory, so that
-        #empty directories contained in directories just containg that
-        #empty directory don't get prohibited from deletion.
-        rel_dir.ascend do |dir|
-          dir.rmdir if dir.children.empty?
-        end
-      end
-      
+    #Downloads the package from the remote repository and places it in
+    #+directory+. Returns a new Package instance which is a local
+    #package refering to the downloaded file. If a block is given, yields
+    #the number of bytes to fetch and how many bytes have already been fetched.
+    def fetch(directory, &block) # :yields: bytes_total, bytes_done
+      raise(Errors::SmcGetError, "This is already a local package!") unless remote?
+      path = @location.fetch_package(@spec.pkg_name, directory, &block)
+      self.class.from_file(path)
     end
     
-    #Returns true if the package is installed locally. Returns false
-    #otherwise.
-    def installed?
-      SmcGet.datadir.join(PACKAGE_SPECS_DIR, "#{@name}.yml").file?
+    #Does the same as #fetch, but turns this instance into a local package
+    #object instead of returning a new object. Returns the path to the
+    #downloaded package file.
+    def fetch!(directory, &block) # :yields: bytes_total, bytes_done
+      raise(Errors::SmcGetError, "This is already a local package!") unless remote?
+      path = @location.fetch_package(@spec.pkg_name, directory, &block)
+      @location = path
     end
     
-    #Get package information on a remote package. This method never
-    #retrieves any information from a locally installed package, look
-    #at #spec for that. Return value is the package specification in form
-    #of a hash.
+    #Returns a truth value if this package resides in a repository
+    #(attention: A local repository is a repository, too!).
+    def remote?
+      @location.kind_of?(Repository)
+    end
+    
+    #Returns a truth value if this packages is a bare file on your
+    #computer.
+    def local?
+      !remote?
+    end
+    
+    #Decompresses this package into +directory+, creating a subdirectory
+    #named after the archive without the extension, and returns the path
+    #to that subdirectory (a Pathname object).
     #
-    #WARNING: This function is not thread-safe.
-    def getinfo
-      yaml = nil
-      Tempfile.open('pkgdata') do |tmp|
-        begin
-          SmcGet.download("packages/#{@name}.yml", tmp.path)
-        rescue Errors::DownloadFailedError
-          raise(Errors::NoSuchPackageError.new(@name), "ERROR: Package not found in the repository: #{@name}")
-        end
-        yaml = YAML.load_file(tmp.path)
-      end
-      return yaml
+    #This method is of course only available for local packages, so you may
+    #have to call #fetch or #fetch!.
+    def decompress(directory)
+      raise(Errors::SmcGetError, "Only local packages can be decompressed!") if remote?
+      
+      PackageArchive.new(@location).decompress(directory)
     end
     
-    #Retrieves the package specification from a locally installed package
-    #in form of a hash. In order to fetch information from a remote package,
-    #you have to use the #getinfo method.
-    def spec
-      if installed?
-        YAML.load_file(@spec_file)
-      else
-        raise(Errors::NoSuchPackageError, "ERROR: Package not installed locally: #@name.")
-      end
-    end
-    
-    #Returns the name of the package.
-    def to_s
-      @name
-    end
-    
-    #Human-readable description of form
-    #  #<SmcGet::Package package_name (installation_status)>
     def inspect
-      "#<#{self.class} #{@name} (#{installed? ? 'installed' : 'not installed'})>"
+      "#<#{self.class} #{@spec.name} (#{remote? ? 'remote' : 'local'})>"
     end
     
   end
   
 end
-# vim:set ts=8 sts=2 sw=2 et: #
