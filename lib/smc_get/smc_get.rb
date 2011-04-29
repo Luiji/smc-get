@@ -22,6 +22,7 @@ require "pathname"
 require 'tempfile'
 require "fileutils"
 require "tempfile"
+require "singleton"
 begin
   require "psych"
   YAML = Psych unless defined?(YAML)
@@ -82,18 +83,10 @@ module SmcGet
   
   class << self
     
+    #The temporary directory used by smc-get.
     attr_reader :temp_dir
     
-    #Initializes the library. Pass in the URL from which you want
-    #to downloaded packages (most likely Luiji's contributed level
-    #repository at <tt>https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/</tt>)
-    #and the directory where SMC is installed (something along the lines of
-    #<b>/usr/share/smc</b>). Note you *have* to call this method before
-    #you can make use of the smc-get library; otherwise you'll get bombed
-    #by SmcGet::Errors::LibraryNotInitialized exceptions.
-    #
-    #You may call this method more than once if you want to reinitialize
-    #the library to use other resources.
+    #Initializes the library.
     def setup
       @temp_dir = Pathname.new(Dir.mktmpdir("smc-get"))
       at_exit{@temp_dir.rmtree}

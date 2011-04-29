@@ -49,7 +49,7 @@ module SmcGet
       begin
         @packages_list = open(@uri + LIST_FILE){|tmpfile| tmpfile.read}.split
       rescue SocketError, OpenURI::HTTPError => e #open-uri raises HTTPError even in case of other protocols
-        raise(InvalidRepository.new(@uri), "ERROR: #{e.message}")
+        raise(Errors::InvalidRepository.new(@uri), e.message)
       end
     end
     

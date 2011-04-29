@@ -132,6 +132,8 @@ Report bugs to: luiji@users.sourceforge.net
 smc-get home page: <http://www.secretmaryo.org/>
 EOF
     
+    attr_reader :config
+    
     #Writes <tt>obj.inspect</tt> to $stdout if the CUI is running in debug
     #mode. If +obj+ is a string, it is simply written out.
     def self.debug(obj)
@@ -164,7 +166,15 @@ EOF
       @config = {}
       parse_commandline(argv)
       load_config_file
-      SmcGet.setup(@config[:repo_url], @config[:data_directory])
+      SmcGet.setup
+      begin
+        @remote_repository = SmcGet::RemoteRepository.new(@config[:repo_url])
+        @local_repository = SmcGet::LocalRepository.new(@config[:data_directory])
+      rescue Errors::InvalidRepository => e
+        $stderr.puts("WARNING: Couldn't connect to this repository:")
+        $stderr.puts(e.repository_uri)
+        $stderr.puts("Reason: #{e.message}")
+      end
     end
     
     #Starts executing of the CUI. This method never returns, it
@@ -225,11 +235,11 @@ EOF
       
       #Now parse the subcommand.
       command = argv.shift.to_sym
-          CUI.debug("Found subcommand #{command}.")
+      CUI.debug("Found subcommand #{command}.")
       sym = :"#{command.capitalize}Command"
       if CUICommands.const_defined?(sym)
         begin
-          @command = CUICommands.const_get(sym).new(argv)
+          @command = CUICommands.const_get(sym).new(self, argv)
         rescue CUICommands::InvalidCommandline => e
           $stderr.puts(e.message)
           $stderr.puts("Try #$0 help.")

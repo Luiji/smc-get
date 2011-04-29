@@ -84,7 +84,7 @@ module SmcGet
           goal_dir.mkdir
           
           FileUtils.cp(spec_file, goal_dir)
-          FileUtils.cp(readme, goal_dir)
+          FileUtils.cp(readme, goal_dir) if readme.file? #Optional
           [:levels, :graphics, :music, :sounds, :worlds].each do |sym|
             #4.1. Create the group’s subdir
             dirname = const_get(:"#{sym.upcase}_DIR")

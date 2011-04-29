@@ -47,7 +47,8 @@ module SmcGet
       
       #Creates a new instance of this command. Do not override this, or
       #call at least +super+.
-      def initialize(args)
+      def initialize(cui, args)
+        @cui = cui
         parse(args)
       end
       
