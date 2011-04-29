@@ -62,7 +62,7 @@ either install locally or contribute to the repository (which would
 make it installable via 'smc-get install' directly). When a question asks
 you to input multiple files, you can end the query with an empty line.
 If you like, you can specify multiple files at once by separating them
-with a comma.
+with a comma. Wildcards in filenames are allowed.
 Files you don't specify via an absolute path (i.e. a path beginning with
 either / on *nix or <letter>:\\ on Windows) are searched for in your
 home directory's .smc directory and your SMC installation.
@@ -267,8 +267,13 @@ home directory's .smc directory and your SMC installation.
         elsif path.start_with?("/")
           ary.replace(Dir.glob(path))
         else #OK, relative path
-          #TODO
-          raise(NotImplementedError, "No relative paths yet...")
+          user_level_dir  = Pathname.new(ENV["USER"]) + ".smc" + "levels"
+          smc_install_dir = @cui.local_repository.path + "levels"
+          subary = Dir.glob(smc_install_dir.join(path).to_s)
+          #In case a file with the same name exists in both paths,
+          #the user-level file overrides the SMC installation ones’s.
+          subary.concat(Dir.glob(user_level_dir.join(path).to_s))
+          ary.replace(subary)
         end
         ary
       end

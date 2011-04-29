@@ -133,6 +133,8 @@ smc-get home page: <http://www.secretmaryo.org/>
 EOF
     
     attr_reader :config
+    attr_reader :remote_repository
+    attr_reader :local_repository
     
     #Writes <tt>obj.inspect</tt> to $stdout if the CUI is running in debug
     #mode. If +obj+ is a string, it is simply written out.
@@ -168,8 +170,8 @@ EOF
       load_config_file
       SmcGet.setup
       begin
-        @remote_repository = SmcGet::RemoteRepository.new(@config[:repo_url])
         @local_repository = SmcGet::LocalRepository.new(@config[:data_directory])
+        @remote_repository = SmcGet::RemoteRepository.new(@config[:repo_url])
       rescue Errors::InvalidRepository => e
         $stderr.puts("WARNING: Couldn't connect to this repository:")
         $stderr.puts(e.repository_uri)

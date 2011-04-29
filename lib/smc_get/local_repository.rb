@@ -42,7 +42,7 @@ module SmcGet
     
     def initialize(path)
       @path         = Pathname.new(path)
-      @specs_dir    = @path + SPEC_DIR
+      @specs_dir    = @path + SPECS_DIR
       @cache_dir    = @path + CACHE_DIR
       @levels_dir   = @path + CONTRIB_LEVELS_DIR
       @music_dir    = @path + CONTRIB_MUSIC_DIR
