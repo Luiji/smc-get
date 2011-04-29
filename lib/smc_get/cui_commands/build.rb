@@ -226,7 +226,7 @@ home directory's .smc directory and your SMC installation.
           else #User entered something
             str.split(",").each do |file|
               file.strip! #Due to possible whitespace behind the comma
-              ary = get_file_paths(plural_name, file)
+              ary = get_file_paths(plural_name.to_s, file)
               $stderr.puts("Warning: File(s) not found: #{file}. Ignoring.")  if ary.empty?
               result.concat(ary)
             end
@@ -267,8 +267,14 @@ home directory's .smc directory and your SMC installation.
         elsif path.start_with?("/")
           ary.replace(Dir.glob(path))
         else #OK, relative path
-          user_level_dir  = Pathname.new(ENV["USER"]) + ".smc" + "levels"
-          smc_install_dir = @cui.local_repository.path + "levels"
+          plural_name = "pixmaps" if plural_name == "graphics" #As always...
+          
+          #The user level directory only contains levels, but for the
+          #sake of simplicity I treat it as if sounds etc existed there
+          #as well. It doesn’t hurt if not, because that just causes
+          #an empty array.
+          user_level_dir  = CUI::USER_SMC_DIR + plural_name
+          smc_install_dir = @cui.local_repository.path + plural_name
           subary = Dir.glob(smc_install_dir.join(path).to_s)
           #In case a file with the same name exists in both paths,
           #the user-level file overrides the SMC installation ones’s.

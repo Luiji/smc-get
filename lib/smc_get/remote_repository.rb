@@ -80,12 +80,22 @@ module SmcGet
       goal_file = directory + spec_file
       
       unless @packages_list.include?(pkg_name)
-        raise(NoSuchResourceError.new(:spec, spec_file), "ERROR: Package '#{pkg_name}' not found in the repository!")
+        raise(Errors::NoSuchResourceError.new(:spec, spec_file), "Package '#{pkg_name}' not found in the repository!")
       end
       
       directory.mktree unless directory.directory?
       
-      open(@uri + SPECS_DIR + spec_file) do |tempfile|
+      #I am quite sure that URI#merge has a bug. Example:
+      #  uri = URI.parse("http://www.ruby-lang.org")
+      #Now try to append the path test/test2:
+      #  uri2 = uri + "test" + "test2"
+      #What do you think contains uri2? This:
+      #  http://www.ruby-lang.org/test2
+      #Something missing, eh? Even more surprising, this one works as
+      #expected:
+      #  uri + "test/test2"
+      #The second one is the workaround I use in the following line.
+      open(@uri.merge("#{SPECS_DIR}/#{spec_file}")) do |tempfile|
         File.open(goal_file, "w") do |file|
           file.write(tempfile.read) #Specs almost ever are small enough to fit in RAM
         end
@@ -166,6 +176,13 @@ module SmcGet
         Package.from_repository(self, "#{pkg_name}.yml")
       end
     end
+    
+    #True if a package with the given name (without the .smcpak extension)
+    #exists in the repository.
+    def contain?(pkg_name)
+      @packages_list.include?(pkg_name)
+    end
+    alias contains? contain?
     
   end
   

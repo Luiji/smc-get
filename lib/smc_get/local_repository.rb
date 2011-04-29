@@ -100,7 +100,7 @@ module SmcGet
     end
     
     def uninstall(pkg_name)
-      pkg = @packages.find{|pkg| pkg.spec.pkg_name == pkg_name}
+      pkg = @packages.find{|pkg| pkg.spec.name == pkg_name}
       
       [:levels, :music, :sounds, :graphics, :worlds].each do |sym|
         contrib_dir = self.class.const_get(:"CONTRIB_#{sym.upcase}_DIR")
@@ -127,6 +127,11 @@ module SmcGet
       end
       
     end
+    
+    def contain?(pkg_name)
+      @packages.any?{|pkg| pkg.spec.name == pkg_name}
+    end
+    alias contains? contain?
     
   end
   

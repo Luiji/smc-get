@@ -62,7 +62,7 @@ module SmcGet
   #   what command class inside the CUICommands module to instantiate.
   #4. CUICommand::Command.new calls #parse on the instantiated Command
   #   object (this is a subclass of CUICommand::Command). Note that
-  #   smc-get has not been set up for now, and calls to Package.new or
+  #   smc-get has not been set up for now, and calls to Repository#install or
   #   the like will fail.
   #5. The user calls CUI#start.
   #6. #start looks into @command and invokes the #execute method on it.
@@ -75,10 +75,12 @@ module SmcGet
     
     #Default location of the configuration file.
     DEFAULT_CONFIG_FILE = CONFIG_DIR + "smc-get.yml"
-    #Name of the configuration file a user may put in his home
-    #directory.
-    USER_CONFIG_FILE_NAME = ".smc-get-conf.yml"
-    
+    #The user’s personal directory.
+    USER_DIR = Pathname.new(ENV["HOME"])
+    #The user-level smc-get configuration file.
+    USER_CONFIG_FILE = USER_DIR + ".smc-get-conf.yml"
+    #A user’s personal SMC data directory.
+    USER_SMC_DIR = USER_DIR + ".smc"
     #The help message displayed to the user when issueing "help".
     GENERAL_HELP =<<EOF
 USAGE:
@@ -110,7 +112,7 @@ You can use three kinds of configuration files with #{File.basename($0)}. They a
 in the order in which they are evaluated:
 
 1. Global configuration file #{DEFAULT_CONFIG_FILE}.
-2. If existant, user-level configuration file #{File.join(ENV["HOME"], USER_CONFIG_FILE_NAME)}.
+2. If existant, user-level configuration file #{USER_CONFIG_FILE}.
 3. If existant, configuration file given on the commandline via the -c option.
 
 Configuration files loaded later overwrite values set in previously loaded
@@ -256,44 +258,43 @@ EOF
     #Loads the configuration file from the <b>config/</b> directory.
     def load_config_file
       #First, load the global configuration file.
-          CUI.debug("Loading global config #{DEFAULT_CONFIG_FILE}.")
+      CUI.debug("Loading global config #{DEFAULT_CONFIG_FILE}.")
       hsh = YAML.load_file(DEFAULT_CONFIG_FILE)
-          CUI.debug(hsh)
+      CUI.debug(hsh)
       
       #Second, load the user config which overrides values set in
       #the global config.
-      user_config_file = Pathname.new(ENV["HOME"]) + USER_CONFIG_FILE_NAME
-          CUI.debug("Loading user-level config #{user_config_file}.")
-      if user_config_file.file?
+      CUI.debug("Loading user-level config #{USER_CONFIG_FILE}.")
+      if USER_CONFIG_FILE.file?
         hsh.merge!(YAML.load_file(user_config_file.to_s))
       else
-            CUI.debug("Not found.")
+        CUI.debug("Not found.")
       end
-          CUI.debug(hsh)
+      CUI.debug(hsh)
       
       #Third, load the config file from the commandline, if any. This overrides
       #values set in the user and global config.
       if @cmd_config
-            CUI.debug("Loading -c option config #{@cmd_config}.")
+        CUI.debug("Loading -c option config #{@cmd_config}.")
         if @cmd_config.file?
           hsh.merge!(YAML.load_file(@cmd_config.to_s))
         else
           $stderr.puts("Configuration file #{@cmd_config} not found.")
         end
-            CUI.debug(hsh)
+        CUI.debug(hsh)
       end
       
       #Fourth, check for values on the commandline. They override anything
       #set previously. They are set directly in @config, so we simply have
       #to retain the old values in it.
-          CUI.debug("Loading commandline options.")
+      CUI.debug("Loading commandline options.")
       @config.merge!(hsh){|key, old_val, new_val| old_val}
           CUI.debug(@config)
       
       #Fifth, turn all keys into symbols, because that's more Ruby-like.
-          CUI.debug("Converting to symbols.")
+      CUI.debug("Converting to symbols.")
       @config = Hash[@config.map{|k, v| [k.to_sym, v]}]
-          CUI.debug(@config)
+      CUI.debug(@config)
     end
     
   end

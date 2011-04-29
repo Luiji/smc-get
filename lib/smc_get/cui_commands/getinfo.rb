@@ -43,7 +43,7 @@ HELP
       end
       
       def parse(args)
-            CUI.debug("Parsing #{args.count} args for getinfo.")
+        CUI.debug("Parsing #{args.count} args for getinfo.")
         raise(InvalidCommandline, "No package given.") if args.empty?
         @force_remote = false
         
@@ -60,28 +60,28 @@ HELP
       end
       
       def execute(config)
-            CUI.debug("Executing getinfo.")
-        pkg = Package.new(@pkg_name)
-        #Get the information
-        info = if pkg.installed? and !@force_remote
-          puts "[LOCAL PACKAGE]"
-          pkg.spec
-        else
-          puts "[REMOTE PACKAGE]"
-          pkg.getinfo
-        end
-        #Now output the information
-        puts "Title: #{info['title']}"
-        if info['authors'].count == 1
-          puts "Author: #{info['authors'][0]}"
-        else
-          puts 'Authors:'
-          info['authors'].each do |author|
-            puts "  - #{author}"
+        CUI.debug("Executing getinfo.")
+        Dir.mktmpdir do |tmpdir|
+          repo = if @cui.local_repository.contains?(@pkg_name) and !@force_remote
+            puts "[LOCAL PACKAGE]"
+            @cui.local_repository
+          else
+            puts "[REMOTE PACKAGE]"
+            @cui.remote_repository
           end
+          info = YAML.load_file(repo.fetch_spec(@pkg_name + ".yml", tmpdir).to_s)
+          
+          puts "Title: #{info['title']}"
+          if info['authors'].count == 1
+            puts "Author: #{info['authors'][0]}"
+          else
+            puts 'Authors:'
+            info['authors'].each{|author| puts "  - #{author}"}
+          end
+          puts "Difficulty: #{info['difficulty']}"
+          puts "Description: #{info['description']}"
         end
-        puts "Difficulty: #{info['difficulty']}"
-        puts "Description: #{info['description']}"
+        
       end
       
     end
