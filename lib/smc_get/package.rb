@@ -26,24 +26,16 @@ module SmcGet
     
     #The PackageSpecification of this package.
     attr_reader :spec
-    #Either the Repository in which the package is contained, or the
-    #Pathname of a bare .smcpak file.
-    attr_reader :location
+    #The pathname of the .smcpak file.
+    attr_reader :path
     
     class << self
-      
-      #Creates a new Package from the name of a package
-      #specification file and the repository in which it resides.
-      #The specification file will be downloaded into a temporary directory, but
-      #not the whole package of course.
-      def from_repository(repository, spec_file)
-        path = repository.kind_of?(LocalRepository) ? spec_file : repository.fetch_spec(spec_file, SmcGet.temp_dir)
-        new(path, repository)
-      end
       
       #Creates a new Package from a local .smcpak file.
       def from_file(file)
         pkg_name = File.basename(file).sub(/\.smcpak$/, "")
+        #No spec file is provided, we therefore need to extract it from
+        #the archive.
         path = PackageArchive.new(file).decompress(SmcGet.temp_dir) + pkg_name + "#{pkg_name}.yml"
         new(path, file)
       end
@@ -113,54 +105,27 @@ module SmcGet
     #from_repository class methods.
     def initialize(spec_file, pkg_location)
       @spec = PackageSpecification.from_file(spec_file)
-      @location = pkg_location
-    end
-    
-    #Downloads the package from the remote repository and places it in
-    #+directory+. Returns a new Package instance which is a local
-    #package refering to the downloaded file. If a block is given, yields
-    #the number of bytes to fetch and how many bytes have already been fetched.
-    def fetch(directory, &block) # :yields: bytes_total, bytes_done
-      raise(Errors::SmcGetError, "This is already a local package!") unless remote?
-      path = @location.fetch_package(@spec.pkg_name, directory, &block)
-      self.class.from_file(path)
-    end
-    
-    #Does the same as #fetch, but turns this instance into a local package
-    #object instead of returning a new object. Returns the path to the
-    #downloaded package file.
-    def fetch!(directory, &block) # :yields: bytes_total, bytes_done
-      raise(Errors::SmcGetError, "This is already a local package!") unless remote?
-      path = @location.fetch_package(@spec.pkg_name, directory, &block)
-      @location = path
-    end
-    
-    #Returns a truth value if this package resides in a repository
-    #(attention: A local repository is a repository, too!).
-    def remote?
-      @location.kind_of?(Repository)
-    end
-    
-    #Returns a truth value if this packages is a bare file on your
-    #computer.
-    def local?
-      !remote?
+      @path = pkg_location
     end
     
     #Decompresses this package into +directory+, creating a subdirectory
     #named after the archive without the extension, and returns the path
     #to that subdirectory (a Pathname object).
-    #
-    #This method is of course only available for local packages, so you may
-    #have to call #fetch or #fetch!.
     def decompress(directory)
-      raise(Errors::SmcGetError, "Only local packages can be decompressed!") if remote?
-      
-      PackageArchive.new(@location).decompress(directory)
+      PackageArchive.new(@path).decompress(directory)
     end
     
+    #Compares two packages. They’re considered equal if their package
+    #specifications are equal. See PackageSpecification#==.
+    def ==(other)
+      return false unless other.respond_to? :spec
+      @spec == other.spec
+    end
+    
+    #Human-readabe description of form
+    #  #<SmcGet::Package <package name>>
     def inspect
-      "#<#{self.class} #{@spec.name} (#{remote? ? 'remote' : 'local'})>"
+      "#<#{self.class} #{@spec.name}>"
     end
     
   end

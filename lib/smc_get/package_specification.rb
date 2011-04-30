@@ -143,11 +143,27 @@ module SmcGet
       errors
     end
     
+    #Compares two specifications. They are considered equal if all their
+    #attributes (levels, difficulty, etc.) are equal.
+    def ==(other)
+      return false unless other.respond_to? :info
+      @info == other.info
+    end
+    
     def save(directory)
       raise(Errors::InvalidSpecification, validate.first) unless valid?
       
       path = Pathname.new(directory) + "#{@name}.yml"
-      path.open("w"){|f| YAML.dump(@info, f)}
+      #Turn the spec keys for serialization into strings
+      hsh = {}
+      @info.each_pair{|k, v| hsh[k.to_s] = v}
+      path.open("w"){|f| YAML.dump(hsh, f)}
+    end
+    
+    protected
+    
+    def info
+      @info
     end
     
   end

@@ -122,6 +122,7 @@ module SmcGet
     #                     there despite of this, but packages not listed
     #                     in the repository’s contents file are treated as if
     #                     they weren’t there.
+    #[OpenURI::HTTPError] Connection error.
     #==Return value
     #The path to the downloaded file as a Pathname object.
     #==Usage
@@ -132,11 +133,11 @@ module SmcGet
     #  end
     def fetch_package(pkg_file, directory = ".")
       directory = Pathname.new(directory)
-      pkg_name = spec_file.sub(/\.smcpak$/, "")
+      pkg_name = pkg_file.sub(/\.smcpak$/, "")
       goal_file = directory + pkg_file
       
       unless @packages_list.include?(pkg_name)
-        raise(NoSuchPackageError.new(pkg_name), "ERROR: Package '#{pkg_name}' not found in the repository!")
+        raise(Errors::NoSuchPackageError.new(pkg_name), "ERROR: Package '#{pkg_name}' not found in the repository!")
       end
       
       directory.mktree unless directory.directory?
@@ -145,7 +146,9 @@ module SmcGet
       size_proc = lambda{|content_length| bytes_total = content_length}
       prog_proc = lambda{|bytes_done| yield(bytes_total, bytes_done)}
       
-      open(@uri + PACKAGES_DIR + pkg_file, "rb", content_length_proc: size_proc, progress_proc: prog_proc) do |tempfile|
+      #See the source of #fetch_spec for an explanation on the obscure
+      #URI concatenation.
+      open(@uri + "#{PACKAGES_DIR}/#{pkg_file}", "rb", content_length_proc: size_proc, progress_proc: prog_proc) do |tempfile|
         #The packages may be too big for fitting into RAM, therefore we’re going
         #to read and write the packages chunk by chunk. Btw. please notice me
         #if you find a SMC package that’s larger than 4 GiB! I’d be curious
@@ -171,16 +174,20 @@ module SmcGet
     end
     
     #See attribute.
-    def packages # :nodoc:
-      @packages_list.map do |pkg_name|
-        Package.from_repository(self, "#{pkg_name}.yml")
-      end
-    end
+    # def packages # :nodoc:
+    #   @packages_list.map do |pkg_name|
+    #     Package.from_repository(self, "#{pkg_name}.yml")
+    #   end
+    # end
     
     #True if a package with the given name (without the .smcpak extension)
     #exists in the repository.
-    def contain?(pkg_name)
-      @packages_list.include?(pkg_name)
+    def contain?(pkg)
+      if pkg.kind_of? Package
+        @packages_list.include?(pkg.spec.name)
+      else
+        @packages_list.include?(pkg_name)
+      end
     end
     alias contains? contain?
     

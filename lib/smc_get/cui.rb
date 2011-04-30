@@ -101,7 +101,7 @@ str}
 Use "help COMMAND" to get help on a specific command. "help" without an
 argument displays this message.
 
-OPTIONS FOR #{File.basename($0)} itself
+OPTIONS FOR #{File.basename($0).upcase} ITSELF
   -c\t--config-file FILE\tUse FILE as the configuration file.
   -d\t--data-directory DIR\tSet the directory where to save packages into.
   -D\t--debug\t\t\tEnter debug mode. A normal user shouldn't use this.
@@ -193,7 +193,7 @@ EOF
           exit
         end
       rescue Errno::EACCES, Errors::SmcGetError => e
-        $stderr.puts(e.message) #All SmcGetErrors should have an informative message (and the EACCES one too)
+        $stderr.puts("ERROR: #{e.message}") #All SmcGetErrors should have an informative message (and the EACCES one too)
         exit 2
       rescue => e #Ouch. Fatal error not intended.
         $stderr.puts("[BUG] #{e.class}")

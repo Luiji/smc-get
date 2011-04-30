@@ -40,7 +40,7 @@ HELP
       end
       
       def parse(args)
-            CUI.debug("Parsing #{args.count} args for install.")
+        CUI.debug("Parsing #{args.count} args for install.")
         raise(InvalidCommandline, "No package given.") if args.empty?
         @reinstall = false
         @pkg_names = []
@@ -57,32 +57,52 @@ HELP
       end
       
       def execute(config)
-            CUI.debug("Executing install.")
-        @pkg_names.each do |pkg_name|
-          pkg = Package.new(pkg_name)
-          if pkg.installed?
-            if @reinstall
-              puts "Reinstalling #{pkg}."
-            else
-              puts "#{pkg} is already installed. Maybe you want --reinstall?."
-              next
+        CUI.debug("Executing install.")
+        
+        Dir.mktmpdir("smc-get_install") do |tmpdir|
+          @pkg_names.each do |pkg_name|
+            if @cui.local_repository.contains?(pkg_name)
+              if @reinstall
+                puts "Reinstalling #{pkg_name}."
+              else
+                puts "#{pkg_name} is already installed. Maybe you want --reinstall?."
+                next
+              end
             end
-          end
-          puts "Installing #{pkg}."
-          #Windows doesn't understand ANSI escape sequences, so we have to
-          #use the carriage return and reprint the whole line.
-          base_str = "\rDownloading %s... (%.2f%%)"
-          pkg.install(config[:max_tries]) do |filename, percent_filename, retrying|
-            if retrying
-              puts "#{retrying.message} Retrying."
-            else
-              print "\r", " " * 80 #Clear everything written before
-              printf(base_str, filename, percent_filename)
+            puts "Installing #{pkg_name}."
+            spec_file = pkg_name + ".yml"
+            pkg_file  = pkg_name + ".smcpak"
+            
+            #Windows doesn't understand ANSI escape sequences, so we have to
+            #use the carriage return and reprint the whole line.
+            base_str = "\rDownloading %s... (%.2f%%)"
+            tries = 0
+            begin
+              tries += 1
+              path_to_spec    = @cui.remote_repository.fetch_spec(spec_file, tmpdir)
+              path_to_package = @cui.remote_repository.fetch_package(pkg_file, tmpdir) do |bytes_total, bytes_done|
+                percent = ((bytes_done.to_f / bytes_total) * 100)
+                print "\r", " " * 80 #Clear everything written before
+                printf(base_str, pkg_file, percent)
+              end
+            rescue OpenURI::HTTPError => e #Thrown even in case of FTP and HTTPS
+              if tries >= 3
+                $stderr.puts("ERROR: Failed to download #{pkg_name}.")
+                $stderr.puts("Continueing with the next package if any.")
+                next
+              else
+                $stderr.puts("ERROR: #{e.message}")
+                $stderr.puts("Retrying.")
+                retry
+              end
             end
-          end
-          puts
-        end
-      end
+            puts #Terminating \n
+            puts "Installing #{pkg_file}..."
+            pkg = Package.new(path_to_spec, path_to_package)
+            @cui.local_repository.install(pkg)
+          end #each
+        end #mktmpdir
+      end #execute
       
     end
     

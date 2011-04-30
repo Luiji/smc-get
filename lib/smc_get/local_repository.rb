@@ -11,7 +11,7 @@ module SmcGet
     #Directory where the packages’ level files are kept.
     CONTRIB_LEVELS_DIR   = Pathname.new("levels") #Levels in subdirectories are currently not recognized by SMC
     #Directory where the packages’ music files are kept.
-    CONTRIB_MUSIC_DIR    = Pathname.new("music") + "contrib_music"
+    CONTRIB_MUSIC_DIR    = Pathname.new("music") + "contrib-music"
     #Directory where the packages’ graphic files are kept.
     CONTRIB_GRAPHICS_DIR = Pathname.new("pixmaps") + "contrib-graphics"
     #Directory where the packages’ sound files are kept.
@@ -36,9 +36,9 @@ module SmcGet
     attr_reader :contrib_sounds_dir
     #This repository’s package worlds dir.
     attr_reader :contrib_worlds_dir
-    #All packages that are installed in this repository. An array of
-    #InstalledPackage objects.
-    attr_reader :packages
+    #An array of PackageSpecification objects containing the specs of
+    #all packages installed in this repository.
+    attr_reader :package_specs
     
     def initialize(path)
       @path         = Pathname.new(path)
@@ -50,10 +50,15 @@ module SmcGet
       @sounds_dir   = @path + CONTRIB_SOUNDS_DIR
       @worlds_dir   = @path + CONTRIB_WORLDS_DIR
       
-      @packages = []
+      #Create the directories if they’re not there yet
+      [@specs_dir, @cache_dir, @levels_dir, @music_dir, @graphics_dir, @sounds_dir, @worlds_dir].each do |dir|
+        dir.mkpath unless dir.directory?
+      end
+      
+      @package_specs = []
       @specs_dir.children.each do |spec_path|
         next unless spec_path.to_s.end_with?(".yml")
-        @packages << Package.from_repository(self, spec_path)
+        @package_specs << PackageSpecification.from_file(spec_path)
       end
     end
     
@@ -84,19 +89,19 @@ module SmcGet
     end
     
     def install(package, &block)
-      package = package.fetch(SmcGet.temp_dir, &block) if package.remote?
+      path = package.decompress(SmcGet.temp_dir) + package.spec.name
       
-      path = package.decompress(SmcGet.temp_dir)
+      package.spec.save(@specs_dir)
       
-      FileUtils.cp(path + package.spec.path.basename, @specs_dir)
+      FileUtils.cp_r(path.join(Package::LEVELS_DIR).children, @levels_dir)
+      FileUtils.cp_r(path.join(Package::MUSIC_DIR).children, @music_dir)
+      FileUtils.cp_r(path.join(Package::GRAPHICS_DIR).children, @graphics_dir)
+      FileUtils.cp_r(path.join(Package::SOUNDS_DIR).children, @sounds_dir)
+      FileUtils.cp_r(path.join(Package::WORLDS_DIR).children, @worlds_dir)
       
-      FileUtils.cp(path.join(Package::LEVELS_DIR), @levels_dir)
-      FileUtils.cp(path.join(Package::MUSIC_DIR), @music_dir)
-      FileUtils.cp(path.join(Package::GRAPHICS_DIR), @graphics_dir)
-      FileUtils.cp(path.join(Package::SOUNDS_DIR), @sounds_dir)
-      FileUtils.cp(path.join(Package::WORLDS_DIR), @worlds_dir)
+      FileUtils.cp(package.path, @cache_dir)
       
-      FileUtils.cp(package.location, @cache_dir)
+      @package_specs << package.spec #This package is now installed and therefore the spec must be in that array
     end
     
     def uninstall(pkg_name)
@@ -126,10 +131,15 @@ module SmcGet
         end
       end
       
+      @package_specs.delete(pkg.spec) #Otherwise we have a stale package in the array
     end
     
-    def contain?(pkg_name)
-      @packages.any?{|pkg| pkg.spec.name == pkg_name}
+    def contain?(pkg)
+      if pkg.kind_of? Package
+        @package_specs.include?(pkg.spec)
+      else
+        @package_specs.any?{|spec| spec.name == pkg}
+      end
     end
     alias contains? contain?
     
