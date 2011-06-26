@@ -70,14 +70,12 @@ module SmcGet
   #repository.
   PACKAGE_LIST_FILE = "#{PACKAGE_SPECS_DIR}/packages.lst".freeze
   #The version of smc-get.
-  Pathname.new(__FILE__).dirname.expand_path.join("..", "..", "VERSION.txt").read.match(/\A(\d+)\.(\d+)\.(\d+)(\-.*?)?\n(.*?)\n(.*?)\Z/)
+  Pathname.new(__FILE__).dirname.expand_path.join("..", "..", "VERSION.txt").read.match(/\A(\d+)\.(\d+)\.(\d+)(\-.*?)?\Z/)
   VERSION = {
     :mayor => $1.to_i,
     :minor => $2.to_i,
     :tiny => $3.to_i,
     :dev => $4,
-    :date => $5,
-    :commit => $6
   }
   
   class << self
@@ -98,7 +96,6 @@ module SmcGet
     def version
       str = "#{VERSION[:mayor]}.#{VERSION[:minor]}.#{VERSION[:tiny]}"
       str << VERSION[:dev] if VERSION[:dev]
-      str << " (#{VERSION[:date]}, commit #{VERSION[:commit]})"
       str
     end
     
