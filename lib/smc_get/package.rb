@@ -121,6 +121,12 @@ module SmcGet
       return false unless other.respond_to? :spec
       @spec == other.spec
     end
+
+    #Shorthand for:
+    #  pkg.spec.name
+    def to_s
+      @spec.name
+    end
     
     #Human-readabe description of form
     #  #<SmcGet::Package <package name>>
