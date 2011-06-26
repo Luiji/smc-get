@@ -133,6 +133,10 @@ module SmcGet
       
       @package_specs.delete(pkg.spec) #Otherwise we have a stale package in the array
     end
+
+    def to_s
+      @path.to_s
+    end
     
     def contain?(pkg)
       if pkg.kind_of? Package
@@ -164,7 +168,17 @@ module SmcGet
           end #case
         end #attributes.each
       end # @package_specs.each
-    end #sarch
+    end #search
+
+    def modification_time(pkg)
+      raise(Errors::NoSuchPackageError.new(pkg.to_s)) unless contains?(pkg)
+      if pkg.kind_of?(Package)
+        spec_file = @specs_dir + pkg.spec.spec_file_name
+      else
+        spec_file = @specs_dir + "#{pkg}.yml"
+      end
+      spec_file.mtime
+    end
     
   end #LocalRepository
   
