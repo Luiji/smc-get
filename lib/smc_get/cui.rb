@@ -194,6 +194,12 @@ EOF
         end
       rescue Errno::EACCES, Errors::SmcGetError => e
         $stderr.puts("ERROR: #{e.message}") #All SmcGetErrors should have an informative message (and the EACCES one too)
+        if self.class.debug_mode?
+          $stderr.puts "====DEBUGGING INFORMATION===="
+          $stderr.puts "Class: #{e.class}"
+          $stderr.puts "Message: #{e.message}"
+          $stderr.puts "Backtrace: #{e.backtrace.join("\n\t")}"
+        end
         exit 2
       rescue => e #Ouch. Fatal error not intended.
         $stderr.puts("[BUG] #{e.class}")
@@ -241,15 +247,20 @@ EOF
       command = argv.shift.to_sym
       CUI.debug("Found subcommand #{command}.")
       sym = :"#{command.capitalize}Command"
-      if CUICommands.const_defined?(sym)
-        begin
-          @command = CUICommands.const_get(sym).new(self, argv)
-        rescue CUICommands::InvalidCommandline => e
-          $stderr.puts(e.message)
-          $stderr.puts("Try #$0 help.")
+      begin
+        if CUICommands.const_defined?(sym)
+          begin
+            @command = CUICommands.const_get(sym).new(self, argv)
+          rescue CUICommands::InvalidCommandline => e
+            $stderr.puts(e.message)
+            $stderr.puts("Try #$0 help.")
+            exit 1
+          end
+        else
+          $stderr.puts "Unrecognized command #{command}. Try 'help'."
           exit 1
         end
-      else
+      rescue NameError
         $stderr.puts "Unrecognized command #{command}. Try 'help'."
         exit 1
       end
