@@ -142,7 +142,30 @@ module SmcGet
       end
     end
     alias contains? contain?
+
+    def search(regexp, *attributes)
+      attributes << :name if attributes.empty? #Default value
+      
+      @package_specs.each do |spec|
+        attributes.each do |att|
+          case att
+          when :name        then yield(spec.name) if spec.name =~ regexp
+          when :title       then yield(spec.name) if spec.title =~ regexp
+          when :authors     then yield(spec.name) if spec.authors.any?{|a| a =~ regexp}
+          when :difficulty  then yield(spec.name) if spec.difficulty =~ regexp
+          when :description then yield(spec.name) if spec.description =~ regexp
+          when :levels      then yield(spec.name) if spec.levels.any?{|l| l =~ regexp}
+          when :music       then yield(spec.name) if spec.music.any?{|m| m =~ regexp}
+          when :sounds      then yield(spec.name) if spec.sound.any?{|s| s =~ regexp}
+          when :graphics    then yield(spec.name) if spec.graphics.any?{|g| g =~ regexp}
+          when :worlds      then yield(spec.name) if spec.worlds.any?{|w| w =~ regexp}
+          else
+            $stderr.puts("Warning: Unknown attribute #{att}, ignoring it.")
+          end #case
+        end #attributes.each
+      end # @package_specs.each
+    end #sarch
     
-  end
+  end #LocalRepository
   
 end

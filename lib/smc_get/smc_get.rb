@@ -25,10 +25,9 @@ require "tempfile"
 require "singleton"
 begin
   require "psych"
-  YAML = Psych unless defined?(YAML)
 rescue LoadError
-  require 'yaml'
 end
+require "yaml"
 require 'uri'
 require "open-uri"
 require 'net/https'

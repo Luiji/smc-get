@@ -190,7 +190,61 @@ module SmcGet
       end
     end
     alias contains? contain?
+
+    #call-seq:
+    #  search(regexp [, *attributes ]){|pkgname|...}
+    #
+    #Searches for a specific package and yields each candidate to the
+    #given block.
+    #==Parameters
+    #[regexp]      The Regular Expression to use as the search pattern.
+    #[*attributes] (<tt>[:name]</tt>) A list of all attributes to match
+    #              the Regular Expression against (note that only
+    #              passing :name is siginificantly faster, because
+    #              there’s no need to download the specs).
+    #              Possible attributes:
+    #              * name
+    #              * title
+    #              * authors
+    #              * difficulty
+    #              * description
+    #              * levels
+    #              * music
+    #              * sounds
+    #              * graphics
+    #              * worlds
+    #[pkgname]     *Blockargument*. The package name (not title!) of
+    #              a package matching the search criteria.
+    #==Examples
+    #  rp.search(/cool/){|pkgname| p pkgname}            #=> "cool_levels"
+    #  rp.search(/Luiji/i, :authors){|pkgname| p pkgname} #=> All packages created by Luiji or luiji...
+    def search(regexp, *attributes)
+      attributes << :name if attributes.empty? #Default value
+      if attributes == [:name] #Good, no need to download all the specs
+        @packages_list.each{|name| yield(name) if name =~ regexp}
+      else #OK, so we need to download one spec after the other...
+        @packages_list.each do |pkgname|
+          spec = PackageSpecification.from_file(fetch_spec("#{pkgname}.yml", SmcGet.temp_dir))
+          attributes.each do |att|
+            case att
+            when :name        then yield(pkgname) if spec.name =~ regexp
+            when :title       then yield(pkgname) if spec.title =~ regexp
+            when :authors     then yield(pkgname) if spec.authors.any?{|a| a =~ regexp}
+            when :difficulty  then yield(pkgname) if spec.difficulty =~ regexp
+            when :description then yield(pkgname) if spec.description =~ regexp
+            when :levels      then yield(pkgname) if spec.levels.any?{|l| l =~ regexp}
+            when :music       then yield(pkgname) if spec.music.any?{|m| m =~ regexp}
+            when :sounds      then yield(pkgname) if spec.sound.any?{|s| s =~ regexp}
+            when :graphics    then yield(pkgname) if spec.graphics.any?{|g| g =~ regexp}
+            when :worlds      then yield(pkgname) if spec.worlds.any?{|w| w =~ regexp}
+            else
+              $stderr.puts("Warning: Unknown attribute #{att}, ignoring it.")
+            end #case
+          end #attributes.each
+        end # @packages.each
+      end #if only :name
+    end #search
     
-  end
+  end #RemoteRepository
   
-end
+end #SmcGet
