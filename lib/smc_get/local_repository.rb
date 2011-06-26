@@ -121,7 +121,7 @@ module SmcGet
           empty_dirs = []
           contrib_dir.find do |path|
             next if path.basename == contrib_dir #We surely don’t want to delete the toplevel dir.
-            empty_dirs << path if path.directory? path.children.empty?
+            empty_dirs << path if path.directory? and path.children.empty?
           end
           #If no empty directories are present anymore, break out of the loop.
           break if empty_dirs.empty?
