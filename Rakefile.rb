@@ -22,7 +22,7 @@ require "rake"
 gem "rdoc", ">= 3.4" #Ruby's builtin RDoc is unusable
 require "rdoc/task"
 require "rake/testtask"
-require "rake/gempackagetask"
+require "rubygems/packagetask"
 require_relative "./lib/smc_get"
 
 load "smc-get.gemspec"
