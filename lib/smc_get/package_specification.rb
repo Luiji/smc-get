@@ -36,7 +36,7 @@ module SmcGet
     
     #The keys listed here must be mentioned inside a package spec,
     #otherwise the package is considered broken.
-    SPEC_MANDATORY_KEYS = [:title, :last_update, :authors, :difficulty, :description].freeze
+    SPEC_MANDATORY_KEYS = [:title, :last_update, :authors, :difficulty, :description, :checksums].freeze
     
     ##
     # :attr_accessor: title
@@ -94,6 +94,10 @@ module SmcGet
     ##
     # :attr_accessor: worlds
     #An array of graphic file names (strings).
+
+    ##
+    # :attr_accessor: checksums
+    #A hash that maps each filename in this package to it’s SHA1 checksum.
     
     #The name of the package this specification is used in, without any
     #file extension.
@@ -139,6 +143,8 @@ module SmcGet
       info.each_pair do |key, value|
         spec.send(:"#{key}=", value)
       end
+      #TODO: Convert the strings in :checksums to strings, except the
+      #filenames, those should be strings. Anyone???
       
       raise(Errors::InvalidSpecification, spec.validate.first) unless spec.valid?
       
@@ -180,7 +186,7 @@ module SmcGet
       "#@name.yml"
     end
     
-    [:title, :last_update, :authors, :difficulty, :description, :install_message, :remove_message, :dependencies, :levels, :music, :sounds, :graphics, :worlds].each do |sym|
+    [:title, :last_update, :authors, :difficulty, :description, :install_message, :remove_message, :dependencies, :levels, :music, :sounds, :graphics, :worlds, :checksums].each do |sym|
       define_method(sym){@info[sym]}
       define_method(:"#{sym}="){|val| @info[sym] = val}
     end

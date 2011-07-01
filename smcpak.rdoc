@@ -148,6 +148,28 @@ The general structure is as follows:
   worlds:
     - world1
     - world2
+  checksums:
+    levels:
+      lvl1.smclvl: <checksum>
+      lvl2.smclvl: <checksum>
+    graphics:
+      pic1.png: <checksum>
+      pic2.png: <checksum>
+    music:
+      music1.ogg: <checksum>
+      music2.ogg: <checksum>
+    sounds:
+      sound1.ogg: <checksum>
+      sound2.ogg: <checksum>
+    worlds:
+      world1:
+        description.xml: <checksum>
+        layer.xml: <checksum>
+        world.xml: <checksum>
+      world2:
+        description.xml: <checksum>
+        layer.xml: <checksum>
+        world.xml: <checksum>
 
 * The +title+ may not be longer than 80 characters. It can contain whitespace.
   This field is mandatory.
@@ -184,6 +206,8 @@ The general structure is as follows:
   as the option (e.g. files you list under "levels" reside in a "levels"
   directory in your package's root directory). An exception is +worlds+,
   where you specify directory paths rather than file paths.
+* All fields under the +checksums+ field are mandatory. They contain the
+  (hex-encoded) SHA1 checksums of all important files in the package.
 
 The multiline fields can have two different formats that affect how
 newlines are treated. The first format you already saw is this one:

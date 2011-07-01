@@ -73,8 +73,6 @@ EOF
 
           #Execute update if remote is newer than local
           if remote_spec.last_update > local_spec.last_update
-            #TODO: Check for modifications by the user. For now, assume none were made
-            #      and just overwrite the file.
 
             puts "Updating #{pkgname}."
             begin
@@ -84,7 +82,13 @@ EOF
               #version of a package may have files removed that wouldn’t be
               #deleted by a simple overwrite operation.
               print "Uninstalling obsolete version of #{pkgname}... "
-              @cui.local_repository.uninstall(pkgname) #I think we can skip the uninstall message here, since this is not a "real" uninstallation
+              @cui.local_repository.uninstall(pkgname) do |conflict_file|
+                puts "CONFLICT: The file #{conflict_file} has been modified. What now?"
+                puts "1) Ignore and delete anyway"
+                puts "2) Copy file and include MODIFIED in the name."
+                print "Enter a number[1]: "
+                $stdin.gets.chomp.to_i == 2 #True means copying
+              end
               puts "Done."
               
               #Then install the new version.

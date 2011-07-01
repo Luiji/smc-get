@@ -180,12 +180,29 @@ home directory's .smc directory and your SMC installation.
               spec[:graphics].each{|file| FileUtils.cp(file, subdir)}
               
               #Turn the file paths in the spec to relative ones and the
-              #keys to strings.
-              real_spec = {}
+              #keys to strings. Compute the checksums.
+              puts "Creating spec and computing SHA1 checksums..."
+              real_spec = {"checksums" => {}}
               spec.each_pair do |key, value|
                 real_spec[key.to_s] = case key
-                when :levels, :graphics, :music, :sounds, :worlds then value.map!{|file| File.basename(file)}
-                #Further conditions could follow some time
+                                      when :levels, :graphics, :music, :sounds
+                                        real_spec["checksums"][key.to_s] = {}
+                                        value.map do |abs_path|
+                                          basename = File.basename(abs_path)
+                                          real_spec["checksums"][key.to_s][basename] = Digest::SHA1.hexdigest(File.read(abs_path))
+                                          basename #for map
+                                        end
+                                      when :worlds
+                                        real_spec["checksums"]["worlds"] = {}
+                                        value.map do |abs_path|
+                                          basename = File.basename(abs_path)
+                                            real_spec["checksums"]["worlds"][basename] = {
+                                              "description.xml" => Digest::SHA1.hexdigest(File.read(File.join(abs_path, "description.xml"))),
+                                              "layer.xml" => Digest::SHA1.hexdigest(File.read(File.join(abs_path, "layer.xml"))),
+                                              "world.xml" => Digest::SHA1.hexdigest(File.read(File.join(abs_path, "world.xml")))
+                                            }
+                                          basename #for map
+                                        end
                 else
                   value
                 end

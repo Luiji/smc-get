@@ -22,7 +22,7 @@ require "pathname"
 require 'tempfile'
 require "fileutils"
 require "tempfile"
-require "singleton"
+require "digest/sha1"
 begin
   require "psych"
 rescue LoadError
@@ -41,6 +41,17 @@ require_relative "./remote_repository"
 require_relative "./package_archive"
 require_relative "./package_specification"
 require_relative "./package"
+
+#Extend the Hash class with a method to turn all keys into symbols.
+class Hash
+
+  #Recursively turns all keys in this hash into symbols. This method
+  #is inteded for loading configuration files. Doesn’t modify the receiver.
+  def symbolic_keys
+    inject({}){|hsh, (k, v)| hsh[k.to_sym] = v.respond_to?(:symbolic_keys) ? v.symbolic_keys : v; hsh}
+  end
+  
+end
 
 #This is the main module of smc-get and it's namespace.
 module SmcGet

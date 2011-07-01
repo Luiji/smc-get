@@ -58,7 +58,13 @@ EOF
             spec = PackageSpecification.from_file(@cui.local_repository.fetch_spec("#{pkg_name}.yml", SmcGet.temp_dir))
             puts spec.remove_message if spec.remove_message
             print "Removing #{pkg_name}... "
-            @cui.local_repository.uninstall(pkg_name)
+            @cui.local_repository.uninstall(pkg_name) do |conflict_file|
+              puts "CONFLICT: The file #{conflict_file} has been modified. What now?"
+              puts "1) Ignore and delete anyway"
+              puts "2) Copy file and include MODIFIED in the name."
+              print "Enter a number[1]: "
+              $stdin.gets.chomp.to_i == 2 #True means copying
+            end
             puts "Done."
           else
             $stderr.puts "#{pkg_name} is not installed. Skipping."

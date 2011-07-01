@@ -136,8 +136,17 @@ module SmcGet
       FileUtils.cp(pkg_file_path, directory)
       directory + pkg_file
     end
-    
-    def install(package, &block)
+
+    #Installs a package into this local repository in a way that SMC will find
+    #it’s contents.
+    #==Parameter
+    #[package] An instance of class Package. The package to install,
+    #==Example
+    #  lr.install(a_package)
+    #==Remarks
+    #Ensure you have write permissions to the repository, otherwise
+    #you’ll get an Errno::EACCES exception from this method.
+    def install(package)
       path = package.decompress(SmcGet.temp_dir) + package.spec.name
       
       package.spec.save(@specs_dir)
@@ -152,17 +161,42 @@ module SmcGet
       
       @package_specs << package.spec #This package is now installed and therefore the spec must be in that array
     end
-    
+
+    #call-seq:
+    #  uninstall(pkg_name)
+    #  uninstall(pkg_name){|path| ...}
+    #
+    #Uninstalls a package by removing all files it owns. This method checks the
+    #checksums specified in the respective package specifications and if it
+    #detects a user-modified file, the given block is invoked. If the block
+    #evaluates to a truth value, the modified file is copied to a file
+    #in the same directory as the original with ".MODIFIED" just before the
+    #file extension. The blockless form always discards all modified files.
+    #==Parameters
+    #[pkg_name]  The name of the package (without the .smcpak extension) to remove.
+    #[full_path] *Blockargument*. The full Pathname of a file that has been modified.
+    #==Example
+    #  # Delete a package and save all modified files
+    #  rr.uninstall("cool-world"){|file| true}
+    #  # Delete a package and discard all modified files
+    #  rr.uninstall("cool-world")
     def uninstall(pkg_name)
       spec = @package_specs.find{|spec| spec.name == pkg_name}
       
-      [:levels, :music, :sounds, :graphics, :worlds].each do |sym|
+      [:levels, :music, :sounds, :graphics].each do |sym|
         contrib_dir = @path + self.class.const_get(:"CONTRIB_#{sym.upcase}_DIR")
         
         #Delete all the files
         files = spec[sym]
         files.each do |filename|
-          File.delete(contrib_dir + filename)
+          full_path = contrib_dir + filename
+          #Check if the file was modified
+          if block_given? and Digest::SHA1.hexdigest(File.read(full_path)) != spec[:checksums][sym.to_s][filename] #to_s as the keys are strings there, see PackageSpecification.from_file
+            if yield(full_path) #Getting a truth value from the block means copying
+              FileUtils.cp(full_path, full_path.parent + filename.sub(/\.(.*?)$/, '.MODIFIED.\1'))
+            end
+          end
+          File.delete(full_path)
         end
         
         #Delete now empty directories
@@ -178,6 +212,23 @@ module SmcGet
           #the parent directories could be empty now.
           empty_dirs.each{|path| File.delete(path)}
         end
+      end
+
+      #Delete worlds as well. Worlds can’t reside in subdirectories, therefore it’s unnecessary
+      #to check for the empty-directory thing.
+      spec[:worlds].each do |dirname|
+        full_path = @worlds_dir + dirname
+        #Check if any of the world’s files has been modified
+        ["description.xml", "layer.xml", "world.xml"].each do |wfile|
+          full_wfile_path = full_path + wfile
+          if block_given? and Digest::SHA1.hexdigest(full_wfile_path) != spec[:checksums]["worlds"][dirname][wfile] #"worlds" is a string for technical reasons, see PackageSpecification.from_file
+            if yield(full_wfile_path) #Getting a truth value from the block means copying
+              FileUtils.cp_r(full_path, full_path.parent + "#{dirname}.MODIFIED")
+              break #Break from the inner iteration, we just need to copy once
+            end
+          end
+        end
+        FileUtils.rm_r(full_path)
       end
 
       File.delete(@specs_dir + spec.spec_file_name) #Remove the spec itself
