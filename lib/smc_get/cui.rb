@@ -260,8 +260,14 @@ EOF
           $stderr.puts "Unrecognized command #{command}. Try 'help'."
           exit 1
         end
-      rescue NameError
+      rescue NameError => e
         $stderr.puts "Unrecognized command #{command}. Try 'help'."
+        if CUI.debug_mode?
+          $stderr.puts("Class: #{e.class}")
+          $stderr.puts("Message: #{e.message}")
+          $stderr.puts("Backtrace:")
+          $stderr.puts(e.backtrace.join("\n\t"))
+        end
         exit 1
       end
     end

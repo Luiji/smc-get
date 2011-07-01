@@ -105,13 +105,13 @@ module SmcGet
     end
     
     def uninstall(pkg_name)
-      pkg = @packages.find{|pkg| pkg.spec.name == pkg_name}
+      spec = @package_specs.find{|spec| spec.name == pkg_name}
       
       [:levels, :music, :sounds, :graphics, :worlds].each do |sym|
-        contrib_dir = self.class.const_get(:"CONTRIB_#{sym.upcase}_DIR")
+        contrib_dir = @path + self.class.const_get(:"CONTRIB_#{sym.upcase}_DIR")
         
         #Delete all the files
-        files = pkg.spec.send(sym)
+        files = spec[sym]
         files.each do |filename|
           File.delete(contrib_dir + filename)
         end
@@ -120,7 +120,7 @@ module SmcGet
         loop do
           empty_dirs = []
           contrib_dir.find do |path|
-            next if path.basename == contrib_dir #We surely don’t want to delete the toplevel dir.
+            next if path == contrib_dir #We surely don’t want to delete the toplevel dir.
             empty_dirs << path if path.directory? and path.children.empty?
           end
           #If no empty directories are present anymore, break out of the loop.
@@ -130,8 +130,9 @@ module SmcGet
           empty_dirs.each{|path| File.delete(path)}
         end
       end
-      
-      @package_specs.delete(pkg.spec) #Otherwise we have a stale package in the array
+
+      File.delete(@specs_dir + spec.spec_file_name) #Remove the spec itself
+      @package_specs.delete(spec) #Otherwise we have a stale package in the array
     end
 
     def to_s
@@ -169,16 +170,6 @@ module SmcGet
         end #attributes.each
       end # @package_specs.each
     end #search
-
-    def modification_time(pkg)
-      raise(Errors::NoSuchPackageError.new(pkg.to_s)) unless contains?(pkg)
-      if pkg.kind_of?(Package)
-        spec_file = @specs_dir + pkg.spec.spec_file_name
-      else
-        spec_file = @specs_dir + "#{pkg}.yml"
-      end
-      spec_file.mtime
-    end
     
   end #LocalRepository
   

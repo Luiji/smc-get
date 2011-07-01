@@ -29,7 +29,7 @@ module SmcGet
 USAGE: #{File.basename($0)} list [PACKAGE]
 
 If PACKAGE is given, lists all files installed by PACKAGE. Otherwise,
-all installed packages are listed accompanied by their installation
+all installed packages are listed accompanied by their last-update
 date in the format DD-MM-YYYY HH:MM, where the time is given on a
 24-hour clock.
 EOF
@@ -84,11 +84,11 @@ EOF
             spec.worlds.sort.each{|w| puts "\t- #{w}"}
           end
         else
-          printf("%-38s | %-38s\n", "Package", "Installation date")
+          printf("%-38s | %-38s\n", "Package", "Last updated")
           print("-" * 39, "+", "-" * 40, "\n")
-          @cui.local_repository.package_specs.each do |spec|
-            mtime = @cui.local_repository.modification_time(spec.name)
-            printf("%-38s | %-38s\n", spec.name, mtime.strftime("%d-%m-%Y %H:%M"))
+          @cui.local_repository.package_specs.sort_by{|spec| spec.name}.each do |spec|
+            #The "last update" of a package in the *local* repository is it’s installation time.
+            printf("%-38s | %-38s\n", spec.name, spec.last_update.localtime.strftime("%d-%m-%Y %H:%M"))
           end
         end
       end

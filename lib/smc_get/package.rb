@@ -16,7 +16,7 @@ module SmcGet
     
     #A package name is considered valid if it matches this Regular
     #expression.
-    VALID_PKG_NAME = /^[a-zA-Z_0-9]+$/
+    VALID_PKG_NAME = /^[a-zA-Z_\-0-9]+$/
     
     LEVELS_DIR   = "levels"
     MUSIC_DIR    = "music"

@@ -116,6 +116,7 @@ The general structure is as follows:
 
   ---
   title: "TITLE OF YOUR PACKAGE"
+  last_update: 2011-01-23 15:48:00Z
   authors:
     - Author1
     - Author2
@@ -150,6 +151,13 @@ The general structure is as follows:
 
 * The +title+ may not be longer than 80 characters. It can contain whitespace.
   This field is mandatory.
+* The +last_update+ field is used by <tt>smc-get</tt> in order to find out weather or
+  not a package needs to be updated. Fill this with your last modification time in YAML
+  format, preferably using UTC instead of your local timezone which would have the
+  following format:
+    YYYY-MM-DD hh:mm:ssZ
+  The terminating +Z+ is meant literally, i.e. if you’re using UTC it has to be in the
+  final format string. See the sample specification above for an example.
 * The list of +authors+ can be arbitrary long, but must contain at least
   one entry. This field is mandatory.
 * The +difficulty+ can be anything you like, but we encourage you to use

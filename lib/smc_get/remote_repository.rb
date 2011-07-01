@@ -249,26 +249,6 @@ module SmcGet
         end # @packages.each
       end #if only :name
     end #search
-
-    #Returns the last modification time of a package.
-    #==Parameter
-    #[pkg] Either a package name as a string or a real Package object.
-    #==Return value
-    #A Time object representing the last modification time or +nil+ if it
-    #couldn’t be determined.
-    #==Example
-    #  puts rr.modification_time("mylevel").day #=> 26
-    def modification_time(pkg)
-      raise(Errors::NoSuchPackageError.new(pkg.to_s), "ERROR: Package #{pkg} not found in this repository.") unless contains?(pkg)
-      
-      if pkg.kind_of?(Package)
-        spec_uri = @uri.merge("#{SPECS_DIR}/#{pkg.spec.spec_file_name}")
-      else
-        spec_uri = @uri.merge("#{SPECS_DIR}/#{pkg}.yml")
-      end
-
-      open(spec_uri){|page| page.last_modified}
-    end
     
   end #RemoteRepository
   

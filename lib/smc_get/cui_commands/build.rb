@@ -294,11 +294,12 @@ home directory's .smc directory and your SMC installation.
           #an empty array.
           user_level_dir  = CUI::USER_SMC_DIR + plural_name
           smc_install_dir = @cui.local_repository.path + plural_name
-          subary = Dir.glob(smc_install_dir.join(path).to_s)
+          global_files    = Dir.glob(smc_install_dir.join(path).to_s)
+          user_files      = Dir.glob(user_level_dir.join(path).to_s)
           #In case a file with the same name exists in both paths,
           #the user-level file overrides the SMC installation ones’s.
-          subary.concat(Dir.glob(user_level_dir.join(path).to_s))
-          ary.replace(subary)
+          ary.replace(user_files)
+          global_files.each{|path| ary << path unless ary.any?{|p2| File.basename(path) == File.basename(p2)}}
         end
         ary
       end
