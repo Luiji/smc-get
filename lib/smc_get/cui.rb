@@ -287,7 +287,7 @@ EOF
       #the global config.
       CUI.debug("Loading user-level config #{USER_CONFIG_FILE}.")
       if USER_CONFIG_FILE.file?
-        hsh.merge!(YAML.load_file(user_config_file.to_s))
+        hsh.merge!(YAML.load_file(USER_CONFIG_FILE.to_s))
       else
         CUI.debug("Not found.")
       end

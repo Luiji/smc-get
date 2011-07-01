@@ -65,7 +65,7 @@ module SmcGet
       #Download the packages list. Usually it’s small enough to fit into RAM.
       begin
         @packages_list = open(@uri + LIST_FILE){|tmpfile| tmpfile.read}.split
-      rescue SocketError, OpenURI::HTTPError => e #open-uri raises HTTPError even in case of other protocols
+      rescue SocketError, Errno::ECONNREFUSED, OpenURI::HTTPError => e #open-uri raises HTTPError even in case of other protocols
         raise(Errors::InvalidRepository.new(@uri), e.message)
       end
     end
