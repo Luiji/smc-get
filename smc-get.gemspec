@@ -15,6 +15,7 @@ DESCRIPTION
   spec.required_ruby_version = ">= 1.9.2"
   spec.requirements = ["Secret Maryo Chronicles"]
   spec.add_dependency("ruby-xz")
+  spec.add_dependency("minitar")
   spec.files = [Dir["bin/*"],
     Dir["lib/**/*.rb"],
     Dir["test/*.rb"],
@@ -22,7 +23,7 @@ DESCRIPTION
     "COPYING", "README.rdoc", "VERSION.txt"].flatten
   spec.executables = ["smc-get", "smc-checksum"]
   spec.has_rdoc = true
-  spec.extra_rdoc_files = %w[README.rdoc smcpak.rdoc COPYING]
+  spec.extra_rdoc_files = %w[README.rdoc smcpak.rdoc HISTORY.rdoc COPYING]
   spec.rdoc_options << "-t" << "smc-get RDocs" << "-m" << "README.rdoc"
   spec.test_files = Dir["test/test_*.rb"]
   spec.homepage = "https://github.com/Luiji/smc-get"

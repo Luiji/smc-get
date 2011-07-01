@@ -1,0 +1,31 @@
+This file documents the the changes that have been made
+to smc-get between versions. It's *not* intended to serve
+as a full-blown changelog, for this you have to install git
+and issue a <tt>git log</tt> command in the project directory.
+
+Bugfixes are written in <i>italic</i>, mayor changes in <b>bold</b> font.
+
+== 0.2.0-beta1
+
+* <b>Added a completely new SMC package format: smcpak. These are XZ-compressed
+  tarballs allowing for easy deployment of packages. See the smcpak.rdoc file
+  for further information.</b>
+* <b>Rewrote nearly the full API. This release is 100%
+  incompatible with anything released so far.</b>
+* <b>New classes LocalRepository and RemoteRepository for
+  managing downloads and installations.</b>
+* <b><tt>smc-get list</tt> without arguments works a little different now. 
+  Instead of showing the installation time of a package it now shows the
+  time of the last update, which allows you to better keep track of
+  what is out of date.</b>
+* <b>Added <tt>smc-get update</tt> for a fully automated update of all (or
+  selected) installed packages.</b>
+* <b>Added <tt>smc-get build</tt> to automatically build SMC packages either
+  interactively or as an automated process.</b>
+* Added modification detection via SHA1 checksums.
+* New dependency on the {ruby-xz gem}[http://rubygems.org/gems/ruby-xz].
+* New dependency on the {minitar gem}[http://rubygems.org/gems/minitar].
+* New dependency on liblzma[http://tukaani.org/xz/].
+* Official bugtracker is now at GitHub: https://github.com/Luiji/smc-get/issues.
+* Added this file (HISTORY.rdoc) for collecting change information.
+
