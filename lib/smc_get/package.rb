@@ -17,264 +17,244 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
-
 module SmcGet
   
-  #An object of this class represents a package. Wheather it is installed or
-  #not, doesn't matter (call #installed? to find out), but everything you
-  #want to manage your packages can be found here. For example, to install
-  #a remote package, do:
-  #  pkg = SmcGet::Package.new("mypackage")
-  #  pkg.install
-  #Don't forget to set up smc-get before you use the library:
-  #  require "smc_get/"
-  #  SmcGet.setup(
-  #    "https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/",
-  #    "dir/where/you/hava/smc/installed"
-  #  end
+  #Packages are the main objects you will have to deal with. An instance of
+  #class Package encapsulates all known information from a smc package file
+  #(these files are described in the smcpak.rdoc file), and the most important
+  #attribute of this class is +spec+, which is your direct interface to the
+  #package’s specification by providing you with a fitting instance of class
+  #PackageSpecification.
+  #
+  #Apart from inspecting existing packages, you can also use the Package class
+  #to create new pacakges by calling the ::create method (inspecting a given
+  #package file is possible with ::from_file). ::create expects a path to
+  #the directoy which you want to compress into a new SMC package, validates
+  #it against the packaging guidelines and will then either fail or do
+  #the actual compression, outputting an instance of class Package that
+  #(you guessed it) describes the newly created SMC package.
+  #
+  #==Example of building a SMC package
+  #The following is an example that shows you how to build a basic
+  #SMC package by use of the ::create method.
+  #
+  #First you have to decide how you want to name your package. If you
+  #have decided (remember: This is a decision for life!), create a
+  #directory named after the package, note that it isn’t allowed to
+  #contain whitespace.
+  #
+  #Inside the directory, say you named it +cool+, create the following
+  #structure:
+  #
+  #  cool/
+  #    - cool.yml
+  #    - README.txt
+  #    levels/
+  #    music/
+  #    pixmaps/
+  #    sounds/
+  #    worlds/
+  #
+  #If your package doesn’t contain a specific component, e.g. sounds, you
+  #may ommit the corresponding directory.
+  #
+  #Then add all the levels you want to include in the package to the +levels+
+  #subdirectory, e.g. if you have a level named "awesome_1" and one named
+  #"awesome_2", copy them from your personal SMC directory (usually
+  #<b>~/.smc/levels</b>) so that your structure looks like this:
+  #
+  #  cool/
+  #    - cool.yml
+  #    - README.txt
+  #    levels/
+  #      - awesome_1.smclvl
+  #      - awesome_2.smclvl
+  #    music/
+  #    pixmaps/
+  #    sounds/
+  #    worlds/
+  #
+  #Now the most important step. Open up *cool.yml* in your favourite text
+  #editor and write the package specification. You can read about the exact
+  #format with all available options in the smcpak.rdoc file,but for now
+  #just write the following:
+  #
+  #  ---
+  #  title: Cool levels
+  #  last_update: 01-01-2011 04:07:00Z
+  #  levels:
+  #    - awesome_1.smclvl
+  #    - awesome_2.smclvl
+  #  authors:
+  #    - Your Name Here
+  #  difficulty: medium
+  #  description: |
+  #    Here goes your description
+  #    which may span multiple lines.
+  #
+  #Of course put something appropriate into the +last_update+ field
+  #(the format is DD-MM-YYYY hh:mm:ssZ, time zone is UTC).
+  #
+  #After you wrote something into your README.txt (whatever it is),
+  #you *could* build the package the easy way with
+  #  $ cd /path/to/dir/above/cool
+  #  $ smc-get build cool
+  #on the commandline. But I promised you to show the use of
+  #Package.create, so instead do:
+  #  $ cd /path/to/dir/above/cool
+  #  $ ruby -Ipath/to/smcget/lib -rsmc_get -e 'SmcGet::Package.create("cool")'
+  #Either way, you should now end up with a file called *cool.smcpak* in the
+  #parent directory of <b>cool/</b>.
   class Package
     
-    #The package specification file for this packages. This file may not
-    #exist if the package is not installed. This is a Pathname object.
-    attr_reader :spec_file
-    #The name of this package.
-    attr_reader :name
+    #A package name is considered valid if it matches this Regular
+    #expression.
+    VALID_PKG_NAME = /^[a-zA-Z_\-0-9]+$/
+    #Name of the directory the levels reside in the package.
+    LEVELS_DIR   = "levels"
+    #Name of the directory the music resides in the package.
+    MUSIC_DIR    = "music"
+    #Name of the directory the sounds reside in the package.
+    SOUNDS_DIR   = "sounds"
+    #Name of the dierctory the graphics reside in the pacakge.
+    GRAPHICS_DIR = "pixmaps"
+    #Name of the directory the worlds reside in the package.
+    WORLDS_DIR   = "worlds"
+    
+    #The PackageSpecification of this package.
+    attr_reader :spec
+    #The Pathname of the .smcpak file.
+    attr_reader :path
     
     class << self
       
-      #Searches through the package repostitory and returns an array
-      #of matching package objects.
-      #
-      #Pass in the regular expression to search for (or a string, which
-      #then is treated as a regular expression without anchors), the
-      #keys of the specification to search through as an array of symbols,
-      #and wheather you want to query only locally installed packages (by
-      #default, only remote packages are searched).+query_fields+ indicates
-      #which fields of the package specification shall be searched. You can
-      #pass them as an array of symbols. +only_local+ causes smc-get to
-      #do a local search instead of a remote one.
-      #
-      #With solely :pkgname specified, just the specifications for the packages
-      #whose package file names match +regexp+ are downloaded, causing a
-      #massive speedup.
-      def search(regexp, query_fields = [:pkgname], only_local = false)
-        regexp = Regexp.new(Regexp.escape(regexp)) if regexp.kind_of? String
-        ary = []
-      
-        list = if only_local
-          Errors::LibraryNotInitialized.throw_if_needed!
-          installed_packages.map(&:name)
-        else
-          Tempfile.open("smc-get") do |listfile|
-            SmcGet.download(PACKAGE_LIST_FILE, listfile.path)
-            listfile.readlines.map(&:chomp)
-          end
-        end
-      
-        list.each do |pkg_name|
-          pkg = Package.new(pkg_name)
-          #If the user wants to query just the pkgname, we can save
-          #much time by not downloading all the package specs.
-          if query_fields == [:pkgname]
-            ary << pkg if pkg_name =~ regexp
-          else
-            spec = only_local ? pkg.spec : pkg.getinfo
-            query_fields.each do |field|
-              if field == :pkgname #This field is not _inside_ the spec.
-                ary << pkg if pkg_name =~ regexp
-              else
-                #First to_s: Convert Symbol to string used in the specs.
-                #Second to_s: Ensure array values such as "author" are
-                #             handled correctly.
-                ary << pkg if spec[field.to_s].to_s =~ regexp
-              end
+      #Creates a new Package from a local .smcpak file.
+      #==Parameter
+      #[file] The path to the SMC package.
+      #==Return value
+      #An instance of class Package.
+      #==Example
+      #  pkg = SmcGet::Package.from_file("/home/freak/mycoolpackage.smcpak")
+      #==Remarks
+      #As this needs to decompress the package temporarily, this method
+      #may take some time to complete.
+      def from_file(file)
+        pkg_name = File.basename(file).sub(/\.smcpak$/, "")
+        #No spec file is provided, we therefore need to extract it from
+        #the archive.
+        path = PackageArchive.new(file).decompress(SmcGet.temp_dir) + pkg_name + "#{pkg_name}.yml"
+        new(path, file)
+      end
+
+      #Validates +directory+ against the packaging guidelines and compresses it
+      #into a .smcpak file.
+      #==Parameter
+      #[directory] The path to the directory you want to compress.
+      #==Return value
+      #An instance of this class describing the newly created package.
+      #==Example
+      #  pkg = SmcGet::Package.create("/home/freak/mycoollevels")
+      #==Remarks
+      #The .smcpak file is placed in the parent
+      #directory of +directory+, you should therefore ensure you have write
+      #permissions for it.
+      def create(directory)
+        #0. Determine the names of the important files
+        directory = Pathname.new(directory)
+        pkg_name = directory.basename.to_s
+        spec_file = directory + "#{pkg_name}.yml"
+        readme = directory + "README.txt"
+        smcpak_file = directory.parent + "#{pkg_name}.smcpak"
+        
+        #1. Validate the package name
+        raise(Errors::BrokenPackageError, "Invalid package name!") unless pkg_name =~ VALID_PKG_NAME
+        
+        #2. Validate the package spec
+        spec = PackageSpecification.from_file(spec_file) #Raises if necessary
+        
+        #3. Validate the rest of the structure
+        $stderr.puts("Warning: No README.txt found.") unless readme.file?
+        $stderr.puts("Warning: No levels found.") if spec.levels.empty?
+        
+        #4. Compress the whole thing
+        #The process is as follows: A temporary directory is created, in which
+        #a subdirectory that is named after the package is created. The
+        #spec, the README and the levels, music, etc. are then copied into
+        #that subdirectory which in turn is then compressed. The resulting
+        #.smcpak file is copied back to the original directory’s parent dir.
+        #After that, the mktmpdir block ends and deletes the temporary
+        #directory.
+        path = Dir.mktmpdir("smc-get-create-#{pkg_name}") do |tmpdir|
+          goal_dir = Pathname.new(tmpdir) + pkg_name
+          goal_dir.mkdir
+          
+          FileUtils.cp(spec_file, goal_dir)
+          FileUtils.cp(readme, goal_dir) if readme.file? #Optional
+          [:levels, :graphics, :music, :sounds, :worlds].each do |sym|
+            #4.1. Create the group’s subdir
+            dirname = const_get(:"#{sym.upcase}_DIR")
+            goal_group_dir = goal_dir + dirname
+            goal_group_dir.mkdir
+            #4.2. Copy all the group’s files over to it
+            spec[sym].each do |filename|
+              FileUtils.cp(directory + dirname + filename, goal_group_dir)
             end
           end
+          #4.3. actual compression
+          PackageArchive.compress(goal_dir, smcpak_file).path
         end
-        ary
-      end
-      
-      #Returns a list of all currently installed packages as an array of
-      #Package objects.
-      def installed_packages
-        Errors::LibraryNotInitialized.throw_if_needed!
-        specs_dir = SmcGet.datadir + PACKAGE_SPECS_DIR
-        specs_dir.mkpath unless specs_dir.directory?
-        
-        #We need to chdir here, because Dir.glob returns the path
-        #relative to the current working directory and it should be
-        #a bit more performant if I don't have to strip off the relative
-        #prefix of the filenames (which are the names of the packages + .yml).
-        Dir.chdir(specs_dir.to_s) do
-          Dir.glob("**/*.yml").map{|filename| new(filename.match(/\.yml$/).pre_match)}
-        end
+        #5. Return a new instance of Package
+        from_file(path)
       end
       
     end
-    
-    #Creates a new package object from it's name. This doesn't do anything,
-    #especially it doesn't install the package. It just creates an object for
-    #you you can use to inspect or install pacakges. It doesn't even check if
-    #the package name is valid.
-    def initialize(package_name)
-      Errors::LibraryNotInitialized.throw_if_needed!
-      @name = package_name
-      @spec_file = SmcGet.datadir.join(PACKAGE_SPECS_DIR, "#{@name}.yml")
+
+    #Creates a new Package from the given specification file. You shouldn’t
+    #use this method directly, because you would duplicate the
+    #work the ::from_file method already does for you.
+    #==Parameters
+    #[spec_file]    The path to the YAML specification file.
+    #[pkg_location] The path to the SMC package.
+    #==Return value
+    #The newly created Package instance.
+    #==Example
+    #  pkg = SmcGet::Package.new("/home/freak/cool.yml", "/home/freak/cool.smcpak")
+    def initialize(spec_file, pkg_location)
+      @spec = PackageSpecification.from_file(spec_file)
+      @path = pkg_location
     end
     
-    # Install a package from the repository. Yields the name of the file
-    # currently being downloaded, how many percent of that
-    # file have already been downloaded and wheather or not this is a retry (if
-    # so, the exception object is yielded, otherwise false).
-    # The maximum number of retries is specified via the +max_tries+ parameter.
-    def install(max_tries = 3) # :yields: file, percent_file, retrying
-      try = 1 #For avoiding retrying infinitely
-      begin
-        SmcGet.download("packages/#{@name}.yml", SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml") do |file, percent_done|
-          yield(file, percent_done, false) if block_given?
-        end
-      rescue Errors::DownloadFailedError => e
-        if try > max_tries
-          File.delete(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml") #There is an empty file otherwise
-          if e.class == Errors::ConnectionTimedOutError
-            raise #Bubble up
-          else
-            raise(Errors::NoSuchPackageError.new(@name), "ERROR: Package not found in the repository: #{@name}.")
-          end
-        else
-          try += 1
-          yield(e.download_url, 0, e) if block_given?
-          retry
-        end
-      end
-      
-      pkgdata = YAML.load_file(SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml")
-      package_parts = [["levels", :level], ["music", :music], ["graphics", :graphic]]
-      
-      package_parts.each_with_index do |ary, i|
-        part, sym = ary
-        try = 1
-        
-        if pkgdata.has_key?(part)
-          pkgdata[part].each do |filename|
-            begin
-              SmcGet.download("#{part}/#{filename}", SmcGet.datadir + SmcGet.const_get(:"PACKAGE_#{part.upcase}_DIR") + filename) do |file, percent_done|
-                yield(file, percent_done, false) if block_given?
-              end
-            rescue Errors::DownloadFailedError => e
-              if try > max_tries
-                if e.class == Errors::ConnectionTimedOutError
-                  raise #Bubble up
-                else
-                  raise(Errors::NoSuchResourceError.new(sym, error.download_url), "ERROR: #{sym.capitalize} not found in the repository: #{filename}.")
-                end
-              else
-                try += 1
-                yield(e.download_url, 0, e) if block_given?
-                retry
-              end #if try > max_tries
-            end #begin
-          end #each part
-        end #has_key?
-      end #each part and sym
-    end #install
-    
-    # Uninstall a package from the local database. If a block is given,
-    # it is yielded the package part currently being deleted and
-    # how many percent of the files have already been deleted for the current package
-    # part.
-    def uninstall
-      package_file = SmcGet.datadir + PACKAGE_SPECS_DIR + "#{@name}.yml"
-      begin
-        pkgdata = YAML.load_file(package_file)
-      rescue Errno::ENOENT
-        raise(Errors::NoSuchPackageError.new(@name), "ERROR: Local package not found: #{@name}.")
-      end
-      
-      %w[music graphics levels].each_with_index do |part, part_index|
-        if pkgdata.has_key? part
-          total_files = pkgdata[part].count
-          pkgdata[part].each_with_index do |filename, index|
-            begin
-              File.delete(SmcGet.datadir + SmcGet.const_get("PACKAGE_#{part.upcase}_DIR") + filename)
-            rescue Errno::ENOENT
-            end
-            yield(part, ((index + 1) / total_files) * 100) if block_given? #+1, because index is 0-based
-          end
-        end
-      end
-      
-      #Delete the package file
-      File.delete(package_file)
-      
-      #Delete the directories the package file was placed in IF THEY'RE EMPTY.
-      rel_dir, file = package_file.relative_path_from(SmcGet.datadir + PACKAGE_SPECS_DIR).split
-      #rel_dir now holds the path difference between the package directory
-      #and the package spec file. If it is ".", no further dirs have been
-      #introduced.
-      return if rel_dir == Pathname.new(".")
-      #For simplifying the deletion procedure, we change the working directory
-      #to the package spec dir. Otherwise we'd have to keep track of both
-      #the absolute and relative paths, this way just of the latter.
-      Dir.chdir(SmcGet.datadir.join(PACKAGE_SPECS_DIR).to_s) do
-        #Remove from the inmost to the outmost directory, so that
-        #empty directories contained in directories just containg that
-        #empty directory don't get prohibited from deletion.
-        rel_dir.ascend do |dir|
-          dir.rmdir if dir.children.empty?
-        end
-      end
-      
+    #Decompresses this package.
+    #==Parameter
+    #[directory] Where to extract the SMC package to. A subdirectory named after
+    #            the package is automatically created in this directory.
+    #==Return value
+    #The Pathname to the created subdirectory.
+    #==Example
+    #  pkg.decompress(".") #=> /home/freak/cool
+    def decompress(directory)
+      PackageArchive.new(@path).decompress(directory)
     end
     
-    #Returns true if the package is installed locally. Returns false
-    #otherwise.
-    def installed?
-      SmcGet.datadir.join(PACKAGE_SPECS_DIR, "#{@name}.yml").file?
+    #Compares two packages. They’re considered equal if their package
+    #specifications are equal. See PackageSpecification#==.
+    def ==(other)
+      return false unless other.respond_to? :spec
+      @spec == other.spec
     end
-    
-    #Get package information on a remote package. This method never
-    #retrieves any information from a locally installed package, look
-    #at #spec for that. Return value is the package specification in form
-    #of a hash.
-    #
-    #WARNING: This function is not thread-safe.
-    def getinfo
-      yaml = nil
-      Tempfile.open('pkgdata') do |tmp|
-        begin
-          SmcGet.download("packages/#{@name}.yml", tmp.path)
-        rescue Errors::DownloadFailedError
-          raise(Errors::NoSuchPackageError.new(@name), "ERROR: Package not found in the repository: #{@name}")
-        end
-        yaml = YAML.load_file(tmp.path)
-      end
-      return yaml
-    end
-    
-    #Retrieves the package specification from a locally installed package
-    #in form of a hash. In order to fetch information from a remote package,
-    #you have to use the #getinfo method.
-    def spec
-      if installed?
-        YAML.load_file(@spec_file)
-      else
-        raise(Errors::NoSuchPackageError, "ERROR: Package not installed locally: #@name.")
-      end
-    end
-    
-    #Returns the name of the package.
+
+    #Shorthand for:
+    #  pkg.spec.name
     def to_s
-      @name
+      @spec.name
     end
     
-    #Human-readable description of form
-    #  #<SmcGet::Package package_name (installation_status)>
+    #Human-readabe description of form
+    #  #<SmcGet::Package <package name>>
     def inspect
-      "#<#{self.class} #{@name} (#{installed? ? 'installed' : 'not installed'})>"
+      "#<#{self.class} #{@spec.name}>"
     end
     
   end
   
 end
-# vim:set ts=8 sts=2 sw=2 et: #

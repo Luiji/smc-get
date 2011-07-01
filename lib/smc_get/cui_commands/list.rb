@@ -29,8 +29,8 @@ module SmcGet
 USAGE: #{File.basename($0)} list [PACKAGE]
 
 If PACKAGE is given, lists all files installed by PACKAGE. Otherwise,
-all installed packages are listed accompanied by their installation
-date in the format YY-MM-DD HH:MM, where the time is given on a
+all installed packages are listed accompanied by their last-update
+date in the format DD-MM-YYYY HH:MM, where the time is given on a
 24-hour clock.
 EOF
       end
@@ -40,35 +40,55 @@ EOF
       end
       
       def parse(args)
-            CUI.debug("Parsing #{args.count} args for list.")
+        CUI.debug("Parsing #{args.count} args for list.")
         raise(InvalidCommandline, "Too many arguments.") if args.count > 1
         @pkg_name = args.shift #nil if not specified
       end
-      
+
       def execute(config)
-        CUI.debug("Executing list.")
-        if Package.installed_packages.empty?
-          puts "No packages installed."
-        else
-          if @pkg_name
-            pkg = Package.new(@pkg_name)
-            puts "Files installed for #{pkg}:"
-            info = pkg.spec
-            puts
-            puts "Levels:"
-            puts info["levels"].join("\n")
-            puts
-            puts "Music:"
-            puts info.has_key?("music") ? info["music"].join("\n") : "(None)"
-            puts
-            puts "Graphics:"
-            puts info.has_key?("graphics") ? info["graphics"].join("\n") : "(None)"
+        CUI.debug("Executing list")
+        if @pkg_name
+          spec = PackageSpecification.from_file(@cui.local_repository.fetch_spec("#{@pkg_name}.yml", SmcGet.temp_dir))
+          puts "Files installed for #{spec.name}:"
+          puts "====================#{'=' * spec.name.length}="
+          puts
+          
+          puts "Levels:"
+          if spec.levels.empty?
+            puts "\t(none)"
           else
-            printf("%-38s | %-38s\n", "Package", "Installation date")
-            print("-" * 39, "+", "-" * 40, "\n")
-            Package.installed_packages.each do |pkg|
-              printf("%-38s | %-38s\n", pkg.name, pkg.spec_file.mtime.strftime("%d-%m-%Y %H:%M"))
-            end
+            spec.levels.sort.each{|lvl| puts "\t- #{lvl}"}
+          end
+          puts
+
+          puts "Music:"
+          if spec.music.empty?
+            puts "\t(none)"
+          else
+            spec.music.sort.each{|m| puts "\t- #{m}"}
+          end
+          puts
+
+          puts "Graphics:"
+          if spec.graphics.empty?
+            puts "\t(none)"
+          else
+            spec.graphics.sort.each{|g| puts "\t- #{g}"}
+          end
+          puts
+
+          puts "Worlds:"
+          if spec.worlds.empty?
+            puts "\t(none)"
+          else
+            spec.worlds.sort.each{|w| puts "\t- #{w}"}
+          end
+        else
+          printf("%-38s | %-38s\n", "Package", "Last updated")
+          print("-" * 39, "+", "-" * 40, "\n")
+          @cui.local_repository.package_specs.sort_by{|spec| spec.name}.each do |spec|
+            #The "last update" of a package in the *local* repository is it’s installation time.
+            printf("%-38s | %-38s\n", spec.name, spec.last_update.localtime.strftime("%d-%m-%Y %H:%M"))
           end
         end
       end

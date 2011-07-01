@@ -62,7 +62,7 @@ module SmcGet
   #   what command class inside the CUICommands module to instantiate.
   #4. CUICommand::Command.new calls #parse on the instantiated Command
   #   object (this is a subclass of CUICommand::Command). Note that
-  #   smc-get has not been set up for now, and calls to Package.new or
+  #   smc-get has not been set up for now, and calls to Repository#install or
   #   the like will fail.
   #5. The user calls CUI#start.
   #6. #start looks into @command and invokes the #execute method on it.
@@ -75,10 +75,12 @@ module SmcGet
     
     #Default location of the configuration file.
     DEFAULT_CONFIG_FILE = CONFIG_DIR + "smc-get.yml"
-    #Name of the configuration file a user may put in his home
-    #directory.
-    USER_CONFIG_FILE_NAME = ".smc-get-conf.yml"
-    
+    #The user’s personal directory.
+    USER_DIR = Pathname.new(ENV["HOME"])
+    #The user-level smc-get configuration file.
+    USER_CONFIG_FILE = USER_DIR + ".smc-get-conf.yml"
+    #A user’s personal SMC data directory.
+    USER_SMC_DIR = USER_DIR + ".smc"
     #The help message displayed to the user when issueing "help".
     GENERAL_HELP =<<EOF
 USAGE:
@@ -99,7 +101,7 @@ str}
 Use "help COMMAND" to get help on a specific command. "help" without an
 argument displays this message.
 
-OPTIONS FOR #{File.basename($0)} itself
+OPTIONS FOR #{File.basename($0).upcase} ITSELF
   -c\t--config-file FILE\tUse FILE as the configuration file.
   -d\t--data-directory DIR\tSet the directory where to save packages into.
   -D\t--debug\t\t\tEnter debug mode. A normal user shouldn't use this.
@@ -110,7 +112,7 @@ You can use three kinds of configuration files with #{File.basename($0)}. They a
 in the order in which they are evaluated:
 
 1. Global configuration file #{DEFAULT_CONFIG_FILE}.
-2. If existant, user-level configuration file #{File.join(ENV["HOME"], USER_CONFIG_FILE_NAME)}.
+2. If existant, user-level configuration file #{USER_CONFIG_FILE}.
 3. If existant, configuration file given on the commandline via the -c option.
 
 Configuration files loaded later overwrite values set in previously loaded
@@ -128,9 +130,17 @@ setting in any of the configuration files.
 
 BUG REPORTING
 
-Report bugs to: luiji@users.sourceforge.net
-smc-get home page: <http://www.secretmaryo.org/>
+Report bugs at:  https://github.com/Luiji/smc-get/issues
+
+OTHER
+
+smc-get project page: https://github.com/Luiji/smc-get
+smc home page:        http://www.secretmaryo.org/
 EOF
+    
+    attr_reader :config
+    attr_reader :remote_repository
+    attr_reader :local_repository
     
     #Writes <tt>obj.inspect</tt> to $stdout if the CUI is running in debug
     #mode. If +obj+ is a string, it is simply written out.
@@ -164,7 +174,15 @@ EOF
       @config = {}
       parse_commandline(argv)
       load_config_file
-      SmcGet.setup(@config[:repo_url], @config[:data_directory])
+      SmcGet.setup
+      begin
+        @local_repository = SmcGet::LocalRepository.new(@config[:data_directory])
+        @remote_repository = SmcGet::RemoteRepository.new(@config[:repo_url])
+      rescue Errors::InvalidRepository => e
+        $stderr.puts("WARNING: Couldn't connect to this repository:")
+        $stderr.puts(e.repository_uri)
+        $stderr.puts("Reason: #{e.message}")
+      end
     end
     
     #Starts executing of the CUI. This method never returns, it
@@ -179,7 +197,13 @@ EOF
           exit
         end
       rescue Errno::EACCES, Errors::SmcGetError => e
-        $stderr.puts(e.message) #All SmcGetErrors should have an informative message (and the EACCES one too)
+        $stderr.puts("ERROR: #{e.message}") #All SmcGetErrors should have an informative message (and the EACCES one too)
+        if self.class.debug_mode?
+          $stderr.puts "====DEBUGGING INFORMATION===="
+          $stderr.puts "Class: #{e.class}"
+          $stderr.puts "Message: #{e.message}"
+          $stderr.puts "Backtrace: #{e.backtrace.join("\n\t")}"
+        end
         exit 2
       rescue => e #Ouch. Fatal error not intended.
         $stderr.puts("[BUG] #{e.class}")
@@ -225,18 +249,29 @@ EOF
       
       #Now parse the subcommand.
       command = argv.shift.to_sym
-          CUI.debug("Found subcommand #{command}.")
+      CUI.debug("Found subcommand #{command}.")
       sym = :"#{command.capitalize}Command"
-      if CUICommands.const_defined?(sym)
-        begin
-          @command = CUICommands.const_get(sym).new(argv)
-        rescue CUICommands::InvalidCommandline => e
-          $stderr.puts(e.message)
-          $stderr.puts("Try #$0 help.")
+      begin
+        if CUICommands.const_defined?(sym)
+          begin
+            @command = CUICommands.const_get(sym).new(self, argv)
+          rescue CUICommands::InvalidCommandline => e
+            $stderr.puts(e.message)
+            $stderr.puts("Try #$0 help.")
+            exit 1
+          end
+        else
+          $stderr.puts "Unrecognized command #{command}. Try 'help'."
           exit 1
         end
-      else
+      rescue NameError => e
         $stderr.puts "Unrecognized command #{command}. Try 'help'."
+        if CUI.debug_mode?
+          $stderr.puts("Class: #{e.class}")
+          $stderr.puts("Message: #{e.message}")
+          $stderr.puts("Backtrace:")
+          $stderr.puts(e.backtrace.join("\n\t"))
+        end
         exit 1
       end
     end
@@ -244,44 +279,43 @@ EOF
     #Loads the configuration file from the <b>config/</b> directory.
     def load_config_file
       #First, load the global configuration file.
-          CUI.debug("Loading global config #{DEFAULT_CONFIG_FILE}.")
+      CUI.debug("Loading global config #{DEFAULT_CONFIG_FILE}.")
       hsh = YAML.load_file(DEFAULT_CONFIG_FILE)
-          CUI.debug(hsh)
+      CUI.debug(hsh)
       
       #Second, load the user config which overrides values set in
       #the global config.
-      user_config_file = Pathname.new(ENV["HOME"]) + USER_CONFIG_FILE_NAME
-          CUI.debug("Loading user-level config #{user_config_file}.")
-      if user_config_file.file?
+      CUI.debug("Loading user-level config #{USER_CONFIG_FILE}.")
+      if USER_CONFIG_FILE.file?
         hsh.merge!(YAML.load_file(user_config_file.to_s))
       else
-            CUI.debug("Not found.")
+        CUI.debug("Not found.")
       end
-          CUI.debug(hsh)
+      CUI.debug(hsh)
       
       #Third, load the config file from the commandline, if any. This overrides
       #values set in the user and global config.
       if @cmd_config
-            CUI.debug("Loading -c option config #{@cmd_config}.")
+        CUI.debug("Loading -c option config #{@cmd_config}.")
         if @cmd_config.file?
           hsh.merge!(YAML.load_file(@cmd_config.to_s))
         else
           $stderr.puts("Configuration file #{@cmd_config} not found.")
         end
-            CUI.debug(hsh)
+        CUI.debug(hsh)
       end
       
       #Fourth, check for values on the commandline. They override anything
       #set previously. They are set directly in @config, so we simply have
       #to retain the old values in it.
-          CUI.debug("Loading commandline options.")
+      CUI.debug("Loading commandline options.")
       @config.merge!(hsh){|key, old_val, new_val| old_val}
           CUI.debug(@config)
       
       #Fifth, turn all keys into symbols, because that's more Ruby-like.
-          CUI.debug("Converting to symbols.")
+      CUI.debug("Converting to symbols.")
       @config = Hash[@config.map{|k, v| [k.to_sym, v]}]
-          CUI.debug(@config)
+      CUI.debug(@config)
     end
     
   end

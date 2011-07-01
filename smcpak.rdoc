@@ -1,0 +1,308 @@
+= Secret Maryo Chronicles Package specification
+
+This file describes how Secret Maryo Chronicles Packages are defined.
+They allow for easy deployment and uploading to an online repository which
+we have not yet created, but are going to do soon!
+
+== Contents
+
+1.  General
+2.  File format
+3.  Levels format
+4.  Worlds format
+5.  Graphics format
+6.  Sounds and music format
+7.  README.txt format
+8.  Specification format
+    1. Package specification structure
+9.  About versions and updates
+10. Repositories
+    1. Repository layout
+    2. packages.lst format
+    3. Repository example
+
+== General
+
+* The files have the extension <tt>.smcpak</tt>.
+* The files are xz-compressed tarballs.
+* The filename may not contain whitespace.
+
+== File format
+
+  mypackage.smcpak/
+    - README.txt
+    - mypackage.yml
+    levels/
+      - Level1.smclvl
+      - Level1_sublevel.smclvl
+      - Levelsetname_01Level1.smclvl
+      - Levelsetname_01Level1_sublevel.smclvl
+    worlds/
+      world1/
+        - description.xml
+        - layer.xml
+        - world.xml
+    pixmaps/
+      - graphic1.png
+      - graphic2.png
+    sounds/
+      - sound1.ogg
+      - sound2.ogg
+    music/
+      - music1.ogg
+      - music2.ogg
+
+== Levels format
+
+* A Level must be named after one of the following conventions:
+
+[Levelname.smclvl] This is the simplest way to name a level. If your
+                   package just contains one level or several ones that aren't
+                   related to each other, use this convention.
+[Level1_sublevel.smclvl] Same as the previous convention, but your levels
+                         have sublevels. Prefix the sublevel with the
+                         main level's name and an underscore.
+[Levelsetname_xxLevel1.smclvl] This is the convention you want to use if you
+                               have multiple levels related to each other, e.g.
+                               they just follow one another or are combined
+                               in an overworld. Prefix the levels' names with
+                               the levelset's name, an underscore, and then
+                               a 2-digit number indicating in which order
+                               the levels should be played.
+[Levelsetname_xxLevel1_sublevel.smclvl] The same as the previous convention,
+                                        but the levels have sublevels. Just
+                                        append an underscore to the previous
+                                        convention, then put the sublevel's
+                                        name.
+
+* None of the conventions allows for whitespace in the level names. Use
+  underscores if necessary.
+
+== Worlds format
+
+* We don't have any assumptions about how you name your worlds, but
+* do not use whitespace in their names.
+
+== Graphics format
+
+* Graphics are in the PNG (Portable Network Graphics) format.
+* Their names don't contain whitespace.
+* They may reside in subfolders.
+
+== Sounds and music format
+
+* They are in OGG (OGG Theora) format.
+* Their names don't contain whitespace.
+* They may reside in subfolders.
+
+== README.txt format
+
+* The filename is always <tt>README.txt</tt>.
+* Don't offend anybody in your README.
+* Everything else is up to you.
+
+== Specification format
+
+The package specifiaction is the main file of the package and you should pay close attention to it.
+
+* The file is in YAML format (Yet Another Markup Language).
+* The filename is always the same as the package name (*not* as the title,
+  i.e. if the title is "My Package" and you name the package
+  "mypackage.smcpak", then the spec must be named "mypackage.yml").
+
+The general structure is as follows:
+
+=== Package specification structure
+
+  ---
+  title: "TITLE OF YOUR PACKAGE"
+  last_update: 2011-01-23 15:48:00Z
+  authors:
+    - Author1
+    - Author2
+  difficulty: "DIFFICULTY"
+  dependencies:
+    - package1
+    - package2
+  description: >
+    An arbitrary long description of your package that can
+    span multiple lines.
+  install_message: >
+    A message to print to the terminal after the package has been installed.
+    It may span multiple lines and you're free to ommit this option at all.
+  remove_message: >
+    A message to print to the terminal after the package has been removed.
+    It may span multiple lines and you're free to ommit this option at all.
+  levels:
+    - lvl1.smclvl
+    - lvl2.smclvl
+  graphics:
+    - pic1.png
+    - pic2.png
+  music:
+    - music1.ogg
+    - music2.ogg
+  sounds:
+    - sound1.ogg
+    - sound2.ogg
+  worlds:
+    - world1
+    - world2
+
+* The +title+ may not be longer than 80 characters. It can contain whitespace.
+  This field is mandatory.
+* The +last_update+ field is used by <tt>smc-get</tt> in order to find out weather or
+  not a package needs to be updated. Fill this with your last modification time in YAML
+  format, preferably using UTC instead of your local timezone which would have the
+  following format:
+    YYYY-MM-DD hh:mm:ssZ
+  The terminating +Z+ is meant literally, i.e. if you’re using UTC it has to be in the
+  final format string. See the sample specification above for an example.
+* The list of +authors+ can be arbitrary long, but must contain at least
+  one entry. This field is mandatory.
+* The +difficulty+ can be anything you like, but we encourage you to use
+  one of the following ones:
+  * easy
+  * medium
+  * hard
+  * unknown
+* You *have* to put +difficulty+, even if you just put +unknown+ as the value.
+* The +dependencies+ list contains of an arbitrary long list of package names
+  that have to be installed before this package can be installed. Use this
+  sparingly, because users don't want to end up with 100 packages be installed
+  for a single one. If possible, ommit it at all.
+* The +descripton+ field is mandatory. It contains a multiline description
+  of what this package contains.
+* The +install_message+ field is optional. See the above figure for further
+  explanation.
+* The +remove_message+ field is optional. See the above figure for further
+  explanation.
+* The +levels+, +graphics+, +music+, +sounds+ and +worlds+ fields are all
+  optional, but it makes sense to include at least one of them. They state
+  which files in your directories actually belong to the package. For each
+  option, you specify file paths relative to a directory named the same
+  as the option (e.g. files you list under "levels" reside in a "levels"
+  directory in your package's root directory). An exception is +worlds+,
+  where you specify directory paths rather than file paths.
+
+The multiline fields can have two different formats that affect how
+newlines are treated. The first format you already saw is this one:
+
+  desc: >
+    Newlines that are placed here, like the following
+    do not show up in the output.
+
+Note that the output won't have a newline after the world "following". The
+second form is this one:
+
+  desc: |
+    Newlines that are placed here, like the following
+    do show up in the output.
+
+This time the output will have a newline after the word "following". We don't
+recommand one form over the other, but keep in mind that using the first
+form may better fit large terminals, whereas the second form allows you
+to prevent cutting words in the middle for line breaking (assuming a
+standard 80-characters wide terminal).
+
+== About versions and updates
+
+<tt>smc-get</tt> doesn't have a concept of versions. During install,
+<tt>smc-get</tt> writes the installation date into a special file, allowing
+you to alter the levels downloaded without corrupting it's date. Then, when
+you run <tt>smc-get update</tt>, <tt>smc-get</tt> checks wheather the
+modification times of the package files in the repository are newer than
+the installation date it remembered previously. If it finds one or more
+packages that fulfill this requirement, they will be uninstalled and the
+newer package will be downloaded and installed. If <tt>smc-get</tt> detects
+changes have been made to the levels contained in the package, it will
+ask you if you want to lose them by overwriting the levels with the new
+version from the repository, or if the modified level should be moved to
+a new file with the name <tt>levelname.MODIFIED.smclvl</tt>.
+
+== Repositories
+
+The main repository's URL is not clear as of now (2nd April 2011), but is
+likely to be somewhere on Sourceforge.net. This is the repository
+<tt>smc-get</tt> accesses by default, and you'll find that it contains only
+the compressed packages. If you want to download individual files bypassing
+<tt>smc-get</tt>, you can have a look at the "source repository" at
+https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels . All
+files contained in that repository are collected and compressed to packages
+by means of an automated process (hopefully) and then uploaded to the main
+repository at sourceforge.
+
+=== Repository layout
+
+A repository's access type is unimportant, <tt>smc-get</tt> will handle
+FTP, HTTP and HTTPS all reasonably well. The directory structure of a repository
+is the thing where you have to pay close attention to, otherwise
+<tt>smc-get</tt> will complain and fail. This is what the URIs should look like:
+
+  http://your_host.org/smc-repo
+    /packages
+    /specs
+    /packages.lst
+
+* The +packages+ sub-uri contains the actual packages, tar-xz files ending in
+  <tt>.smcpak</tt>, as discussed earlier in this document.
+* The +specs+ sub-uri contains the package specifications of all the packages
+  in the +packages+ dir, uncompressed to faciliate searching for specific
+  attributes of a package. They obey the same format as the normal package
+  specifications discussed earlier, and in fact, they *are* the same
+  specifications.
+* The <tt>packages.lst</tt> file contains a list of all packages the repository
+  contains. The format is described below.
+
+For instance, if the user wanted <tt>smc-get</tt> to download <tt>mypackage</tt>
+from your repository, <tt>smc-get</tt> would perform the following queries:
+
+1. <tt>GET http://your_host.org/smc-repo/packages.lst</tt>. This is to check if
+   the repository even contains the package.
+2. <tt>GET http://your_host.org/smc-repo/packages/mypackage.smcpak</tt>. This
+   is the actual download operation.
+
+Or, if the user wants to search for a package whose description contains
+"this is cool" <tt>smc-get</tt> would act like this:
+
+1. <tt>GET http://your_host.org/smc-repo/packages.lst</tt>. This is to get a
+   list of all packages the repository contains.
+2. <tt>GET http://your_host.org/smc-repo/specs/firstspec.yml</tt>. The first
+   package's specification mentioned in your <tt>packages.lst</tt> gets
+   downloaded. If it contains the search query "this is cool", <tt>smc-get</tt>
+   provides the user with some information and then continues with the next
+   specification, and so on, until either the user stops the process or all
+   package specifications have been queried.
+
+=== packages.lst format
+
+This file is a simple text file that contains one package name per line. For
+example, if your repository contains the packages "mypackage.smcpak" and
+"mygroup/my2ndpackage.smcpak", the file would look like this:
+
+  mypackage
+  mygroup/my2ndpackage
+
+Note that the file extension <tt>.smcpak</tt> is ommited.
+
+=== Repository example
+
+Suppose your repository contains the packages "cool_level", "myworld", and
+"incredible_levels/hyper1". The URIs your repository provides should look
+like this:
+
+  http://your_host.org/smc-repo/packages/cool_level.smcpak
+  http://your_host.org/smc-repo/packages/myworld.smcpak
+  http://your_host.org/smc-repo/packages/incredible_levels/hyper1.smcpak
+  
+  http://your_host.org/smc-repo/specs/cool_level.yml
+  http://your_host.org/smc-repo/specs/myworld.yml
+  http://your_host.org/smc-repo/specs/incredible_levels/hyper1.yml
+  
+  http://your_host.org/smc-repo/packages.lst
+
+and the <tt>packages.lst</tt> should look like this:
+
+  cool_level
+  myworld
+  incredible_levels/hyper1

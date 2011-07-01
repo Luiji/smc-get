@@ -21,16 +21,25 @@
 require "pathname"
 require 'tempfile'
 require "fileutils"
+require "tempfile"
+require "singleton"
 begin
   require "psych"
-  YAML = Psych unless defined?(YAML)
 rescue LoadError
-  require 'yaml'
 end
+require "yaml"
 require 'uri'
+require "open-uri"
 require 'net/https'
+require "archive/tar/minitar"
+require "xz"
 
 require_relative "./errors"
+require_relative "./repository"
+require_relative "./local_repository"
+require_relative "./remote_repository"
+require_relative "./package_archive"
+require_relative "./package_specification"
 require_relative "./package"
 
 #This is the main module of smc-get and it's namespace.
@@ -61,39 +70,23 @@ module SmcGet
   #repository.
   PACKAGE_LIST_FILE = "#{PACKAGE_SPECS_DIR}/packages.lst".freeze
   #The version of smc-get.
-  Pathname.new(__FILE__).dirname.expand_path.join("..", "..", "VERSION.txt").read.match(/\A(\d+)\.(\d+)\.(\d+)(\-.*?)?\n(.*?)\n(.*?)\Z/)
+  Pathname.new(__FILE__).dirname.expand_path.join("..", "..", "VERSION.txt").read.match(/\A(\d+)\.(\d+)\.(\d+)(\-.*?)?\Z/)
   VERSION = {
     :mayor => $1.to_i,
     :minor => $2.to_i,
     :tiny => $3.to_i,
     :dev => $4,
-    :date => $5,
-    :commit => $6
   }
   
   class << self
     
-    #The URL of the repository.
-    attr_reader :repo_url
-    #The directory where SMC is installed.
-    attr_reader :datadir
+    #The temporary directory used by smc-get.
+    attr_reader :temp_dir
     
-    @repo_url = nil
-    @datadir = nil
-    
-    #Initializes the library. Pass in the URL from which you want
-    #to downloaded packages (most likely Luiji's contributed level
-    #repository at <tt>https://github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/raw/master/</tt>)
-    #and the directory where SMC is installed (something along the lines of
-    #<b>/usr/share/smc</b>). Note you *have* to call this method before
-    #you can make use of the smc-get library; otherwise you'll get bombed
-    #by SmcGet::Errors::LibraryNotInitialized exceptions.
-    #
-    #You may call this method more than once if you want to reinitialize
-    #the library to use other resources.
-    def setup(repo_url, datadir)
-      @repo_url = repo_url
-      @datadir = Pathname.new(datadir)
+    #Initializes the library.
+    def setup
+      @temp_dir = Pathname.new(Dir.mktmpdir("smc-get"))
+      at_exit{@temp_dir.rmtree}
       VERSION.freeze #Nobody changes this after initializing anymore!
     end
     
@@ -103,54 +96,7 @@ module SmcGet
     def version
       str = "#{VERSION[:mayor]}.#{VERSION[:minor]}.#{VERSION[:tiny]}"
       str << VERSION[:dev] if VERSION[:dev]
-      str << " (#{VERSION[:date]}, commit #{VERSION[:commit]})"
       str
-    end
-    
-    # Download the specified raw file from the repository to the specified
-    # output file.  URL should be everything in the URL after
-    # SmcGet.repo_url.
-    # Yields the currently downloaded file and how many percent of that file have
-    # already been downloaded if a block is given.
-    def download(url, output) # :nodoc:
-      Errors::LibraryNotInitialized.throw_if_needed!
-      # Make url friendly.
-      url = URI::Parser.new.escape(url)
-      # Create directories if needed.
-      FileUtils.mkdir_p(File.dirname(output))
-      # Download file.
-      File.open(output, "w") do |outputfile|
-        uri = URI.parse(@repo_url + url)
-        
-        request = Net::HTTP.new(uri.host, uri.port)
-        request.use_ssl = true #GitHub uses SSL
-        
-        begin
-          request.start do
-            #1. Establish connection
-            request.request_get(uri.path) do |response|
-              raise(Errors::DownloadFailedError.new(url), "ERROR: Received HTTP error code #{response.code}.") unless response.code == "200"
-              #2. Get what size the file is
-              final_size = response.content_length
-              current_size = 0
-              #Ensure the first value the user sees are 0%
-              yield(url, 0) if block_given?
-              #3. Get the actual file in parts and report percent done.
-              response.read_body do |part|
-                outputfile.write(part)
-                
-                current_size += part.size
-                percent = (current_size.to_f / final_size.to_f) * 100
-                yield(url, percent) if block_given?
-              end
-            end
-            #Ensure the last value the user sees are 100%
-            yield(url, 100) if block_given?
-          end
-        rescue Timeout::Error
-          raise(Errors::ConnectionTimedOutError.new(url), "ERROR: Connection timed out.")
-        end
-      end
     end
     
   end

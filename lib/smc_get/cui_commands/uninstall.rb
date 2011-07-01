@@ -37,7 +37,7 @@ EOF
       end
       
       def parse(args)
-            CUI.debug("Parsing #{args.count} args for uninstall.")
+        CUI.debug("Parsing #{args.count} args for uninstall.")
         raise(InvalidCommandline, "No package given.") if args.empty?
         @pkg_names = []
         until args.empty?
@@ -52,22 +52,17 @@ EOF
       end
       
       def execute(config)
-            CUI.debug("Executing uninstall.")
+        CUI.debug("Executing uninstall.")
         @pkg_names.each do |pkg_name|
-          pkg = Package.new(pkg_name)
-          puts "Uninstalling #{pkg}."
-          unless pkg.installed?
-            $stderr.puts "#{pkg} is not installed. Skipping."
-            next
+          if @cui.local_repository.contains?(pkg_name)
+            spec = PackageSpecification.from_file(@cui.local_repository.fetch_spec("#{pkg_name}.yml", SmcGet.temp_dir))
+            puts spec.remove_message if spec.remove_message
+            print "Removing #{pkg_name}... "
+            @cui.local_repository.uninstall(pkg_name)
+            puts "Done."
+          else
+            $stderr.puts "#{pkg_name} is not installed. Skipping."
           end
-          #Windows doesn't understand ANSI escape sequences, so we have to
-          #use the carriage return and reprint the whole line.
-          base_str = "\rRemoving %s... (%.2f%%)"
-          pkg.uninstall do |part, percent_part|
-            print "\r", " " * 80 #Clear everything written before
-            printf(base_str, part, percent_part)
-          end
-          puts
         end
       end
       
