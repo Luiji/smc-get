@@ -1,0 +1,44 @@
+#!/usr/bin/env ruby
+#Encoding: UTF-8
+
+require "pathname"
+require "digest/sha1"
+
+PROG = File.basename($0)
+
+if ARGV.include?("-h") or ARGV.include?("--help")
+  puts(<<HELP)
+USAGE:
+  #{PROG} [FILES...]
+
+Prints out all SHA1 checksums of the FILES given at the commandline.
+FILES that are directories are listed recursively. If no FILES
+are given, recursively lists the current directory.
+HELP
+exit
+end
+
+Signal.trap("SIGINT"){exit}
+Signal.trap("SIGTERM"){exit}
+
+ARGV.unshift(".") if ARGV.empty?
+
+ARGV.each do |arg|
+  begin
+    path = Pathname.new(arg)
+    
+    if path.file?
+      puts "#{path}: #{Digest::SHA1.hexdigest(File.read(path))}"
+    else
+      path.find do |sub_path|
+        puts "#{sub_path}: #{Digest::SHA1.hexdigest(File.read(sub_path))}" if sub_path.file?
+      end
+    end
+  rescue Errno::ENOENT => e
+    $stderr.puts("WARNING: Not found: #{arg}.")
+    $stderr.puts("Skipping.")
+  rescue Errno::EACCES => e
+    $stderr.puts("WARNING: Permission denied: #{arg}.")
+    $stderr.puts("Skipping.")
+  end
+end

@@ -20,7 +20,7 @@ DESCRIPTION
     Dir["test/*.rb"],
     Dir["config/*"],
     "COPYING", "README.rdoc", "VERSION.txt"].flatten
-  spec.executables = ["smc-get"]
+  spec.executables = ["smc-get", "smc-checksum"]
   spec.has_rdoc = true
   spec.extra_rdoc_files = %w[README.rdoc smcpak.rdoc COPYING]
   spec.rdoc_options << "-t" << "smc-get RDocs" << "-m" << "README.rdoc"
