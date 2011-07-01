@@ -14,6 +14,7 @@ DESCRIPTION
   spec.platform = Gem::Platform::RUBY
   spec.required_ruby_version = ">= 1.9.2"
   spec.requirements = ["Secret Maryo Chronicles"]
+  spec.add_dependency("ruby-xz")
   spec.files = [Dir["bin/*"],
     Dir["lib/**/*.rb"],
     Dir["test/*.rb"],
