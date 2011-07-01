@@ -55,7 +55,7 @@ EOF
         CUI.debug("Executing uninstall.")
         @pkg_names.each do |pkg_name|
           if @cui.local_repository.contains?(pkg_name)
-            spec = PackageSpecification.from_file(@cui.local_repository.fetch_spec("#{pkg_name}.yml"))
+            spec = PackageSpecification.from_file(@cui.local_repository.fetch_spec("#{pkg_name}.yml", SmcGet.temp_dir))
             puts spec.remove_message if spec.remove_message
             print "Removing #{pkg_name}... "
             @cui.local_repository.uninstall(pkg_name)
