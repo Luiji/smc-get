@@ -56,13 +56,14 @@ user-level SMC directory, i.e. ~/.smc.
             Package.create(@directory)
           else #No directory given
             puts(<<-MSG)
-Welcome to the smc-get build process! Answer the following questions
-properly and you'll end up with a ready-to-install package you can
-either install locally or contribute to the repository (which would
-make it installable via 'smc-get install' directly). When a question asks
-you to input multiple files, you can end the query with an empty line.
+Welcome to the smc-get build process! 
+Answer the following questions properly and you'll end up with a ready-to-
+install package you can either install locally or contribute to the repository
+(which would make it installable via 'smc-get install' directly). When a question
+asks you to input multiple files, you can end the query with an empty line.
 If you like, you can specify multiple files at once by separating them
 with a comma. Wildcards in filenames are allowed.
+
 Files you don't specify via an absolute path (i.e. a path beginning with
 either / on *nix or <letter>:\\ on Windows) are searched for in your
 home directory's .smc directory and your SMC installation.
@@ -74,7 +75,8 @@ home directory's .smc directory and your SMC installation.
             [:levels, :graphics, :music, :sounds, :worlds].each do |sym|
               spec[sym].concat(input_files(sym))
             end
-            
+
+            puts
             puts("Who participated in creating this package?")
             loop do
               print "> "
@@ -90,7 +92,8 @@ home directory's .smc directory and your SMC installation.
                 spec[:authors].concat(str.split(",").map(&:strip))
               end
             end
-            
+
+            puts
             puts "Enter this package's dependecy packages:"
             loop do
               print "> "
@@ -103,10 +106,12 @@ home directory's .smc directory and your SMC installation.
             end
             
             loop do
+              puts
               print("Enter the difficulty: ")
               break unless (spec[:difficulty] = $stdin.gets.chomp).empty?
             end
-              
+            
+            puts
             puts("Enter the package's description. A single line containing containg")
             puts("END")
             puts("terminates the query.")
@@ -129,7 +134,8 @@ home directory's .smc directory and your SMC installation.
             [:install_message, :remove_message].each{|sym| spec[sym] = input_desc(sym)}
             
             loop do
-              puts("Enter the package's full title (it can contain whitespace):")
+              puts
+              print("Enter the package's full title (it can contain whitespace):")
               spec[:title] = $stdin.gets.chomp
               if spec[:title].strip.empty?
                 $stderr.puts "You *have* to specify a title that doesn't consist solely of whitespace!"
@@ -140,7 +146,8 @@ home directory's .smc directory and your SMC installation.
             
             pkgname = nil
             loop do
-              puts "Enter the package's name (this mustn't contain whitespace):"
+              puts
+              print "Enter the package's name (this mustn't contain whitespace):"
               pkgname = $stdin.gets.chomp
               if pkgname.strip.empty?
                 $stderr.puts "You *have* to specify a name!"
@@ -150,7 +157,11 @@ home directory's .smc directory and your SMC installation.
                 break
               end
             end
-            
+
+            #Set the last_update spec field to now
+            spec[:last_update] = Time.now.utc
+
+            puts
             #This is all. Start building the package.
             Dir.mktmpdir("smc-get-build-package") do |tmpdir|
               puts "Creating package..."
@@ -186,7 +197,7 @@ home directory's .smc directory and your SMC installation.
               puts "Compressing..."
               pkg = Package.create(pkgdir)
               puts "Copying..."
-              FileUtils.cp(pkg.location, "./")
+              FileUtils.cp(pkg.path, "./")
               #compressed_file_name returns only the name of the package file,
               #no path. Expanding it therefore results in the current
               #working directory prepended to it.
@@ -197,6 +208,12 @@ home directory's .smc directory and your SMC installation.
         rescue Errors::BrokenPackageError => e
           $stderr.puts("Failed to build SMC package:")
           $stderr.puts(e.message)
+          if CUI.debug_mode?
+            $stderr.puts("Class: #{e.class}")
+            $stderr.puts("Message: #{e.message}")
+            $stderr.puts("Backtrace:")
+            $stderr.puts(e.backtrace.join("\n\t"))
+          end
           return 1 #Exit code
         end
       end
@@ -209,6 +226,7 @@ home directory's .smc directory and your SMC installation.
       #found files which may be empty if no files were found.
       def input_files(plural_name)
         result = []
+        puts
         puts "Enter the names of the #{plural_name} you want to include:"
         loop do
           print "> "
@@ -239,6 +257,7 @@ home directory's .smc directory and your SMC installation.
       #the user enters no text beside the END marker, returns nil. Pass in
       #what to tell the user is to be entered.
       def input_desc(sym)
+        puts
         puts("Enter the package's #{sym}. A single line containing containg")
         puts("END")
         puts("terminates the query. Enter END immediately if you don't want")
