@@ -130,8 +130,12 @@ setting in any of the configuration files.
 
 BUG REPORTING
 
-Report bugs to: luiji@users.sourceforge.net
-smc-get home page: <http://www.secretmaryo.org/>
+Report bugs at:  https://github.com/Luiji/smc-get/issues
+
+OTHER
+
+smc-get project page: https://github.com/Luiji/smc-get
+smc home page:        http://www.secretmaryo.org/
 EOF
     
     attr_reader :config

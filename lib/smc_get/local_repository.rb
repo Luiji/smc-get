@@ -1,7 +1,37 @@
 #Encoding: UTF-8
+################################################################################
+# This file is part of smc-get.
+# Copyright (C) 2010-2011 Entertaining Software, Inc.
+# Copyright (C) 2011 Marvin Gülker
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+################################################################################
 
 module SmcGet
-  
+
+  #A LocalRepository contains all the packages that are installed locally, i.e.
+  #that have been downloaded and added to your local SMC installation.
+  #It provides the exact same methods as RemoteRepository, but works completely
+  #local and therefore doesn’t need an internet connection as RemoteRepository does.
+  #
+  #The only notable difference is that instances of this class have some
+  #attributes different from those defined for RemoteRepository, but usually
+  #you shouldn’t have to worry about that.
+  #
+  #Concluding, you’ll find the documentation of most of the methods of this class
+  #in the documentation of the RemoteRepository class, because duplicating docs
+  #doesn’t make much sense.
   class LocalRepository < Repository
     
     #Directory where the package specs are kept.
@@ -39,7 +69,26 @@ module SmcGet
     #An array of PackageSpecification objects containing the specs of
     #all packages installed in this repository.
     attr_reader :package_specs
-    
+
+    #"Creates" a new local repository whose root is located at the given +path+.
+    #When instanciating this class, you should point it to the root of your
+    #SMC installation’s *share* directory, e.g. <b>/usr/share/smc</b>.
+    #==Parameter
+    #[path] The path to your SMC installation.
+    #==Return value
+    #The newly created LocalRepository.
+    #==Example
+    #  lr = SmcGet::LocalRepository.new("/usr/share/smc")
+    #==Remarks
+    #smc-get requires some additional directories in your SMC installation,
+    #namely (where +smc+ is your SMC’s *share* directory):
+    #  * smc/packages
+    #  * smc/music/contrib-music
+    #  * smc/sounds/contrib-sounds
+    #  * smc/pixmaps/contrib-graphics
+    #These will be created when you call this method, so make sure
+    #you have the appropriate permissions for these directories or
+    #you’ll get an Errno::EACCES exception when calling ::new.
     def initialize(path)
       @path         = Pathname.new(path)
       @specs_dir    = @path + SPECS_DIR
@@ -135,6 +184,7 @@ module SmcGet
       @package_specs.delete(spec) #Otherwise we have a stale package in the array
     end
 
+    #Returns the path this repository refers to.
     def to_s
       @path.to_s
     end
