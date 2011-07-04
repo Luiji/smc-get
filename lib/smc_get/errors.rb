@@ -126,9 +126,12 @@ module SmcGet
     #Raised when a repository wasn’t found or contains structure errors.
     class InvalidRepository < SmcGetError
       
-      #The URL of the repository.
+      #The URI of the repository. For remote repositories the URL, for
+      #local repositories the local installation path.
       attr_reader :repository_uri
-      
+
+      #Creates a new instance of this class. Pass in the URL or path to
+      #the repository.
       def initialize(repository_uri)
         @repository_uri = repository_uri
       end
