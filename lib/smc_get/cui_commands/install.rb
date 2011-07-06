@@ -60,25 +60,8 @@ HELP
         CUI.debug("Executing install.")
         
         @pkg_names.each do |pkg_name|
-          if @cui.local_repository.contains?(pkg_name)
-            if @reinstall
-              puts "Reinstalling #{pkg_name}."
-            else
-              puts "#{pkg_name} is already installed. Maybe you want --reinstall?."
-              next
-            end
-          end
-          puts "Installing #{pkg_name}."
-          spec_file = pkg_name + ".yml"
-          pkg_file  = pkg_name + ".smcpak"
-
           begin
-            path = download_package(pkg_name)
-            pkg = Package.from_file(path)
-            puts pkg.spec.install_message if pkg.spec.install_message
-            print "Decompressing... "
-            @cui.local_repository.install(pkg)
-            puts "Done."
+            install_package_with_deps(pkg_name)
           rescue => e
             $stderr.puts(e.message)
             $stderr.puts("Ignoring the problem, continueing with the next package, if any.")
@@ -91,7 +74,37 @@ HELP
           end
         end #each
       end #execute
-      
+
+      private
+
+      #Recursively installs a package and all of it’s dependencies and their dependencies and...
+      def install_package_with_deps(pkg_name, dep_list = [], is_dep = false)
+        if dep_list.include?(pkg_name)
+          $stderr.puts("WARNING: Circular dependency detected, skipping additional #{pkg_name}!")
+          return
+        end
+        dep_list << pkg_name
+        
+        if @cui.local_repository.contains?(pkg_name)
+          if @reinstall
+            puts "Reinstalling #{pkg_name}."
+          else
+            puts "#{pkg_name} is already installed. Maybe you want --reinstall?" unless is_dep
+            return
+          end
+        end
+
+        puts "Downloading #{pkg_name}..."
+        path = download_package(pkg_name)
+        pkg = Package.from_file(path)
+
+        puts "Resolving dependencies for #{pkg_name}..."
+        pkg.spec.dependencies.each{|dep| install_package_with_deps(dep, dep_list, true)}
+
+        puts "Installing #{pkg_name}..."
+        puts pkg.install_message if pkg.spec.install_message
+        @cui.local_repository.install(pkg)
+      end
     end
     
   end
