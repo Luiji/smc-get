@@ -29,6 +29,9 @@ module SmcGet
 #{File.basename($0)} uninstall PACKAGES
 
 Removes PACKAGES from your set of downloaded packages.
+
+OPTIONS:
+-y\t--yes\tAssume yes on all queries
 EOF
       end
       
@@ -40,14 +43,15 @@ EOF
         CUI.debug("Parsing #{args.count} args for uninstall.")
         raise(InvalidCommandline, "No package given.") if args.empty?
         @pkg_names = []
+        @assume_yes = false
         until args.empty?
           arg = args.shift
-          #case arg
-          #when "-c", "--my-arg" then ...
-          #else
-          @pkg_names << arg
-          $stderr.puts("Unkown argument #{arg}. Treating it as a package.") if arg.start_with?("-")
-          #end
+          case arg
+          when "-y", "--yes" then @assume_yes = true
+          else
+            @pkg_names << arg
+            $stderr.puts("Unkown argument #{arg}. Treating it as a package.") if arg.start_with?("-")
+          end
         end
       end
       
@@ -57,15 +61,8 @@ EOF
           if @cui.local_repository.contains?(pkg_name)
             spec = PackageSpecification.from_file(@cui.local_repository.fetch_spec("#{pkg_name}.yml", SmcGet.temp_dir))
             puts spec.remove_message if spec.remove_message
-            print "Removing #{pkg_name}... "
-            @cui.local_repository.uninstall(pkg_name) do |conflict_file|
-              puts "CONFLICT: The file #{conflict_file} has been modified. What now?"
-              puts "1) Ignore and delete anyway"
-              puts "2) Copy file and include MODIFIED in the name."
-              print "Enter a number[1]: "
-              $stdin.gets.chomp.to_i == 2 #True means copying
-            end
-            puts "Done."
+            puts "Removing #{pkg_name}... "
+            uninstall_package(pkg_name, @assume_yes, @assume_yes)
           else
             $stderr.puts "#{pkg_name} is not installed. Skipping."
           end
