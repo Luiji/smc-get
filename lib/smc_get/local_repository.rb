@@ -109,6 +109,10 @@ module SmcGet
         next unless spec_path.to_s.end_with?(".yml")
         @package_specs << PackageSpecification.from_file(spec_path)
       end
+    rescue Errors::InvalidSpecification => e
+      raise(Errors::InvalidRepository.new(@path), "Repository contains an invalid specification: #{e.message}")
+    rescue => e
+      raise(Errors::InvalidRepository.new(@path), e.message)
     end
     
     def fetch_spec(spec_file, directory = ".")

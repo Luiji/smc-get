@@ -5,6 +5,10 @@ and issue a <tt>git log</tt> command in the project directory.
 
 Bugfixes are written in <i>italic</i>, mayor changes in <b>bold</b> font.
 
+== 0.2.0-beta2
+
+* <i>Fixed startup crash on permission error.</i>
+
 == 0.2.0-beta1
 
 * <b>Added a completely new SMC package format: smcpak. These are XZ-compressed

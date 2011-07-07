@@ -44,6 +44,7 @@ EOF
       def parse(args)
         CUI.debug("Parsing #{args.count} args for update.")
         @packages = []
+        @assume_yes = false
         while(arg = args.shift)
           case arg
           when "-y", "--yes" then @assume_yes = true
@@ -76,27 +77,14 @@ EOF
 
             puts "Updating #{pkgname}."
             begin
-              path = download_package(pkgname)
-              
               #First uninstall the old version--this is necessary, b/c a new
               #version of a package may have files removed that wouldn’t be
               #deleted by a simple overwrite operation.
-              print "Uninstalling obsolete version of #{pkgname}... "
-              @cui.local_repository.uninstall(pkgname) do |conflict_file|
-                puts "CONFLICT: The file #{conflict_file} has been modified. What now?"
-                puts "1) Ignore and delete anyway"
-                puts "2) Copy file and include MODIFIED in the name."
-                print "Enter a number[1]: "
-                $stdin.gets.chomp.to_i == 2 #True means copying
-              end
-              puts "Done."
+              puts "Uninstalling obsolete version of #{pkgname}... "
+              uninstall_package(pkgname, true, @assume_yes) #We ignore dependencies as we immediately reinstall a package
               
               #Then install the new version.
-              pkg = Package.from_file(path)
-              puts pkg.spec.install_message if pkg.spec.install_message
-              print "Installing #{pkgname}... "
-              @cui.local_repository.install(pkg)
-              puts "Done."
+              install_package_with_deps(pkgname, @assume_yes)
             rescue => e
               $stderr.puts(e.message)
               $stderr.puts("Ignoring the problem and continuing with the next package, if any.")

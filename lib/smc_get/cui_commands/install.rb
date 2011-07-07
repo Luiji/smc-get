@@ -60,25 +60,8 @@ HELP
         CUI.debug("Executing install.")
         
         @pkg_names.each do |pkg_name|
-          if @cui.local_repository.contains?(pkg_name)
-            if @reinstall
-              puts "Reinstalling #{pkg_name}."
-            else
-              puts "#{pkg_name} is already installed. Maybe you want --reinstall?."
-              next
-            end
-          end
-          puts "Installing #{pkg_name}."
-          spec_file = pkg_name + ".yml"
-          pkg_file  = pkg_name + ".smcpak"
-
           begin
-            path = download_package(pkg_name)
-            pkg = Package.from_file(path)
-            puts pkg.spec.install_message if pkg.spec.install_message
-            print "Decompressing... "
-            @cui.local_repository.install(pkg)
-            puts "Done."
+            install_package_with_deps(pkg_name, @reinstall)
           rescue => e
             $stderr.puts(e.message)
             $stderr.puts("Ignoring the problem, continueing with the next package, if any.")
@@ -87,8 +70,8 @@ HELP
               $stderr.puts("Message: #{e.message}")
               $stderr.puts("Backtrace:")
               $stderr.puts(e.backtrace.join("\n\t"))
-            end
-          end
+            end #if debug mode
+          end #begin
         end #each
       end #execute
       

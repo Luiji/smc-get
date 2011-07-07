@@ -51,7 +51,7 @@ module SmcGet
         @cui = cui
         parse(args)
       end
-      
+
       #This method gets all commandline options relevant for this subcommand
       #passed in the +args+ array. You should parse them destructively, i.e.
       #after you finished parsing, +args+ should be an empty array.
@@ -106,6 +106,70 @@ module SmcGet
         end
         puts #Terminating \n
         return path_to_package
+      end
+
+      #Recursively installs a package and all of it’s dependencies and their dependencies and so on.
+      #+pkg_name+ doesn’t include the .smcpak file extension. The +dep_list+ argument is filled
+      #during the recursion with all encountered package to prevent endless recursion in case
+      #of circular dependencies and +is_dep+ determines during the recursion wheather or not
+      #the currently checked package is to be treated as a dependency (used to
+      #spit out a note on --reinstall if the package is already installed). +reinstall+ determines
+      #wheather or not a package already installed shall be reinstalled (this affects the dependencies
+      #as well).
+      def install_package_with_deps(pkg_name, reinstall = false, dep_list = [], is_dep = false)
+        if dep_list.include?(pkg_name)
+          $stderr.puts("WARNING: Circular dependency detected, skipping additional #{pkg_name}!")
+          return
+        end
+        dep_list << pkg_name
+        
+        if @cui.local_repository.contains?(pkg_name)
+          if reinstall
+            puts "Reinstalling #{pkg_name}."
+          else
+            puts "#{pkg_name} is already installed. Maybe you want --reinstall?" unless is_dep
+            return
+          end
+        end
+
+        puts "Downloading #{pkg_name}..."
+        path = download_package(pkg_name)
+        pkg = Package.from_file(path)
+
+        puts "Resolving dependencies for #{pkg_name}..."
+        pkg.spec.dependencies.each{|dep| install_package_with_deps(dep, reinstall, dep_list, true)}
+
+        puts "Installing #{pkg_name}..."
+        puts pkg.install_message if pkg.spec.install_message
+        @cui.local_repository.install(pkg)
+      end
+
+      #Removes a package from the local repository. +pkg_name+ is the name of the
+      #package without any file extension, +ignore_deps+ determines wheather or not
+      #to uninstall even if other packages depend on the target and +ignore_conflicts+
+      #indicates wheather to prompt the user for action if a modified file is
+      #encountered (if set to true, modified files are deleted).
+      def uninstall_package(pkg_name, ignore_deps = false, ignore_conflicts = false)
+        #Check if a dependency conflict exists
+        unless ignore_deps
+          puts "Checking for dependencies on #{pkg_name}..."
+          specs = @cui.local_repository.package_specs.reject{|spec| spec.name == pkg_name} #A package ought to not depend on itself
+          if (i = specs.index{|spec| spec.dependencies.include?(pkg_name)}) #Single equal sign intended
+            puts "The package #{specs[i].name} depends on #{pkg_name}."
+            print "Remove it anyway?(y/n) "
+            raise(Errors::BrokenPackageError, "Can't uninstall #{pkg_name} due to dependency reasons!")  unless $stdin.gets.chomp == "y"
+          end
+        end
+        #Real remove operation
+        puts "Removing files for #{pkg_name}..."
+        @cui.local_repository.uninstall(pkg_name) do |conflict|
+          next(false) if ignore_conflicts
+          puts "CONFLICT: The file #{conflict_file} has been modified. What now?"
+          puts "1) Ignore and delete anyway"
+          puts "2) Copy file and include MODIFIED in the name."
+          print "Enter a number[1]: "
+          $stdin.gets.chomp.to_i == 2 #True means copying
+        end
       end
       
     end
