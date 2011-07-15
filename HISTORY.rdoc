@@ -4,9 +4,13 @@ as a full-blown changelog, for this you have to install git
 and issue a <tt>git log</tt> command in the project directory.
 
 Bugfixes are written in <i>italic</i>, mayor changes in <b>bold</b> font.
+If a change is related to a ticket
+{on our issue tracker}[https://github.com/Luiji/smc-get/issues],
+the corresponding ticket is given in square brackets [ and ].
 
 == 0.2.0-beta2
 
+* <i>Added missing dependency tracking [#3]</i>
 * <i>Fixed startup crash on permission error.</i>
 
 == 0.2.0-beta1
