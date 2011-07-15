@@ -26,11 +26,13 @@ module SmcGet
       
       def self.help
         <<HELP
-USAGE: #{File.basename($0)} install [-r] PACKAGES
+USAGE: #{File.basename($0)} install [-l][-r] PACKAGES
 
 Installs one or more packages.
 
 OPTIONS:
+  -l\t--local\t\tInstalls a package from the local filesystem.
+  \t\t\tPACKAGES are treated as file paths.
   -r\t--reinstall\tForces a reinstallation of the package.
 HELP
       end
@@ -43,11 +45,13 @@ HELP
         CUI.debug("Parsing #{args.count} args for install.")
         raise(InvalidCommandline, "No package given.") if args.empty?
         @reinstall = false
+        @local = false
         @pkg_names = []
         
         until args.empty?
           arg = args.shift
           case arg
+          when "--local", "-l" then @local = true
           when "--reinstall", "-r" then @reinstall = true
           else
             @pkg_names << arg
@@ -61,7 +65,20 @@ HELP
         
         @pkg_names.each do |pkg_name|
           begin
-            install_package_with_deps(pkg_name, @reinstall)
+            if @local
+              pkg = Package.from_file(pkg_name)
+              if @cui.local_repository.contains?(pkg) and !@reinstall
+                puts "#{pkg.spec.name} is already installed. Maybe you want --reinstall?"
+                next
+              end
+              puts "Resolving dependencies for #{pkg.spec.name}..."
+              pkg.spec.dependencies.each{|dep| install_package_with_deps(dep, @reinstall, [], true)}
+              puts "Installing #{pkg.spec.name} from local file..."
+              puts pkg.spec.install_message if pkg.spec.install_message
+              @cui.local_repository.install(pkg)
+            else
+              install_package_with_deps(pkg_name, @reinstall)
+            end
           rescue => e
             $stderr.puts(e.message)
             $stderr.puts("Ignoring the problem, continueing with the next package, if any.")

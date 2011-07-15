@@ -5,6 +5,11 @@ and issue a <tt>git log</tt> command in the project directory.
 
 Bugfixes are written in <i>italic</i>, mayor changes in <b>bold</b> font.
 
+== Next release
+
+* <b>Added --local option to <tt>smc-get install</tt> for installing local
+  package files.</b>
+
 == 0.2.0-beta2
 
 * <i>Fixed startup crash on permission error.</i>
