@@ -169,11 +169,15 @@ home directory's .smc directory and your SMC installation.
               pkgdir = tmpdir + pkgname
               pkgdir.mkdir
               #Copy all the level, music, etc. files
-              [:levels, :music, :sounds, :worlds].each do |sym|
+              [:levels, :music, :sounds].each do |sym|
                 subdir = pkgdir + sym.to_s
                 subdir.mkdir
                 spec[sym].each{|file| FileUtils.cp(file, subdir)}
               end
+              #Copy worlds
+              subdir = pkgdir + "worlds"
+              subdir.mkdir
+              spec[:worlds].each{|dir| FileUtils.cp_r(dir, subdir)}
               #The graphics for whatever reason have an own name...
               subdir = pkgdir + "pixmaps"
               subdir.mkdir

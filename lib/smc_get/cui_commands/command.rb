@@ -140,7 +140,7 @@ module SmcGet
         pkg.spec.dependencies.each{|dep| install_package_with_deps(dep, reinstall, dep_list, true)}
 
         puts "Installing #{pkg_name}..."
-        puts pkg.install_message if pkg.spec.install_message
+        puts pkg.spec.install_message if pkg.spec.install_message
         @cui.local_repository.install(pkg)
       end
 
@@ -164,7 +164,7 @@ module SmcGet
         puts "Removing files for #{pkg_name}..."
         @cui.local_repository.uninstall(pkg_name) do |conflict|
           next(false) if ignore_conflicts
-          puts "CONFLICT: The file #{conflict_file} has been modified. What now?"
+          puts "CONFLICT: The file #{conflict} has been modified. What now?"
           puts "1) Ignore and delete anyway"
           puts "2) Copy file and include MODIFIED in the name."
           print "Enter a number[1]: "

@@ -10,6 +10,7 @@ the corresponding ticket is given in square brackets [ and ].
 
 == 0.2.0-beta2
 
+* <i>Fixed world handling in packages [#4]</i>
 * <i>Added missing dependency tracking [#3]</i>
 * <i>Fixed startup crash on permission error.</i>
 
