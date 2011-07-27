@@ -197,7 +197,7 @@ module SmcGet
             goal_group_dir.mkdir
             #4.2. Copy all the group’s files over to it
             spec[sym].each do |filename|
-              FileUtils.cp(directory + dirname + filename, goal_group_dir)
+              FileUtils.cp_r(directory + dirname + filename, goal_group_dir) #cp_r, b/c worlds are directories
             end
           end
           #4.3. actual compression

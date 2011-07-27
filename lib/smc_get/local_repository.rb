@@ -225,7 +225,7 @@ module SmcGet
         #Check if any of the world’s files has been modified
         ["description.xml", "layer.xml", "world.xml"].each do |wfile|
           full_wfile_path = full_path + wfile
-          if block_given? and Digest::SHA1.hexdigest(full_wfile_path) != spec[:checksums]["worlds"][dirname][wfile] #"worlds" is a string for technical reasons, see PackageSpecification.from_file
+          if block_given? and Digest::SHA1.hexdigest(File.read(full_wfile_path)) != spec[:checksums]["worlds"][dirname][wfile] #"worlds" is a string for technical reasons, see PackageSpecification.from_file
             if yield(full_wfile_path) #Getting a truth value from the block means copying
               FileUtils.cp_r(full_path, full_path.parent + "#{dirname}.MODIFIED")
               break #Break from the inner iteration, we just need to copy once
