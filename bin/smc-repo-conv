@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/env ruby
+#Note the user of string hash keys throughout this file. This is
+#due to the package specifications being serialized using YAML,
+#which shouldn't be used with symbols. To prevent the necessity
+#of converting between symbols and strings everywhere a spec needs
+#to be accessed, I just use strings as the hash keys.
 
 require "open-uri"
 require "fileutils"
@@ -24,27 +29,30 @@ HELP
 exit
 end
 
+Thread.abort_on_exception = true
+
 OUTPUT_DIRECTORY   = Pathname.new(ARGV.pop)
 SPECS_DIRECTORY    = OUTPUT_DIRECTORY + "specs"
 PACKAGES_DIRECTORY = OUTPUT_DIRECTORY + "packages"
+REPO_LIST_FILE     = OUTPUT_DIRECTORY + "packages.lst"
 
 SOURCE_REPO_BASE_URL = "https://raw.github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/master"
 SPECS_BASE_URL       = SOURCE_REPO_BASE_URL + "/packages/"
 PACKAGE_LIST_URL     = SPECS_BASE_URL + "packages.lst"
 ELEMENT_BASE_URLS    = {
-  :levels   => SOURCE_REPO_BASE_URL + "/levels/",
-  :graphics => SOURCE_REPO_BASE_URL + "/graphics/",
-  :music    => SOURCE_REPO_BASE_URL + "/music/",
-  :sounds   => SOURCE_REPO_BASE_URL + "/sounds/",
-  :worlds   => SOURCE_REPO_BASE_URL + "/worlds/"
+  "levels"   => SOURCE_REPO_BASE_URL + "/levels/",
+  "graphics" => SOURCE_REPO_BASE_URL + "/graphics/",
+  "music"    => SOURCE_REPO_BASE_URL + "/music/",
+  "sounds"   => SOURCE_REPO_BASE_URL + "/sounds/",
+  "worlds"   => SOURCE_REPO_BASE_URL + "/worlds/"
 }
 
 ELEMENT_TEMP_DIRS = {
-  :levels   => "levels",
-  :graphics => "pixmaps",
-  :music    => "music",
-  :sounds   => "sounds",
-  :worlds   => "worlds"
+  "levels"   => "levels",
+  "graphics" => "pixmaps",
+  "music"    => "music",
+  "sounds"   => "sounds",
+  "worlds"   => "worlds"
 }
 
 ########################################
@@ -70,33 +78,54 @@ end
 def make_spec(name, old_spec, directory)
   new_spec = old_spec.dup
   new_spec["checksums"] = Hash.new{|hsh, k| hsh[k] = Hash.new(&hsh.default_proc)} #Recursive hash
-
+  
+  #This is a dirty workaround for the fact that the GitHub specs don't obey
+  #the specification structure and use a field "last-updated" instead of
+  #the correct "last_update" (note the missing 'd' at the end).
+  if new_spec["last-updated"]
+    $stderr.puts("**WARNING** Invalid field `last-updated' autocorrected to `last_update' for #{name}!")
+    new_spec["last_update"] = new_spec.delete("last-updated")
+  end
+  
+  #First, go for the similar-structured spec elements
   %w[levels graphics music sounds].each do |str|
+    next unless old_spec[str] #May be missing if not needed
+    
     old_spec[str].each do |file|
       file = Pathname.new(file)
+      #Recursively grab the second-to-last item (the last item is the
+      #file to check itself which we need to assign a value, the checksum,
+      #to). If a file’s parent is "." there’s no need to iterate through the
+      #hash as the file is _directly_ inside an element’s toplevel directory
+      #(where element is one of "levels", "graphics", etc.).
       hsh = new_spec["checksums"][str]
-      file.parent.each_filename{|part| hsh = hsh[part]} #Recursively grabbing second-to-last item
+      file.parent.each_filename{|part| hsh = hsh[part]} unless file.parent.to_s == "."
+      
       checksum = Digest::SHA1.file(directory + ELEMENT_TEMP_DIRS[str] + file).hexdigest
       hsh[file.basename.to_s] = checksum
     end
   end
 
-  old_spec["worlds"].each do |worldname|
-    %w[description.xml layer.xml world.xml].each do |filename|
-      checksum = Digest::SHA1.file(directory + worldname + filename).hexdigest
-      new_spec["checksums"]["worlds"][worldname][filename] = checksum
+  #Then go for the worlds.
+  if old_spec["worlds"] #May be missing if not needed
+    old_spec["worlds"].each do |worldname|
+      %w[description.xml layer.xml world.xml].each do |filename|
+        checksum = Digest::SHA1.file(directory + worldname + filename).hexdigest
+        new_spec["checksums"]["worlds"][worldname][filename] = checksum
+      end
     end
   end
 
   File.open(directory + "#{name}.yml", "w"){|f| YAML.dump(new_spec, f)}
 end
 
-def makepkg(directory)
+#include FileUtils::Verbose #We want to see what’s going on
+include FileUtils
 
-end
+#Initialize smc-get
+SmcGet.setup
 
-include FileUtils::Verbose #We want to see what’s going on
-
+#Setup the bare repository directory structure
 rm_rf OUTPUT_DIRECTORY
 mkdir_p OUTPUT_DIRECTORY
 mkdir PACKAGES_DIRECTORY
@@ -105,6 +134,7 @@ mkdir SPECS_DIRECTORY
 #Get the list of all available packages
 info("Reading remote package list")
 package_names = open(PACKAGE_LIST_URL){|page| page.readlines.map(&:chomp)}
+skipped = []
 
 #Iterate through all the packages
 package_names.each do |pkgname|
@@ -117,24 +147,25 @@ package_names.each do |pkgname|
 
     #Create a temporary directory just for this sole package
     Dir.mktmpdir do |tmpdir|
-      tmpdir = Pathname.new(tmpdir)
+      tmpdir = Pathname.new(tmpdir) + pkgname #Package directory must be named the same as the spec file
+      mkdir_p tmpdir
       
       begin
         #Download all the package’s files into the appropriate directories
-        [:levels, :graphics, :music, :sounds].each do |sym|
-          next unless spec[sym.to_s] #Not all specs contain everything
-          info("Downloading #{sym} for '#{pkgname}'")
+        %w[levels graphics music sounds].each do |str|
+          next unless spec[str] #Not all specs contain everything
+          info("Downloading #{str} for '#{pkgname}'")
           
-          spec[sym.to_s].each do |file|
+          spec[str].each do |file|
             file = Pathname.new(file)
-            downloaded_file = tmpdir + ELEMENT_TEMP_DIRS[sym] + file
+            downloaded_file = tmpdir + ELEMENT_TEMP_DIRS[str] + file
             mkdir_p downloaded_file.dirname #Subdirectories usually allowed
             
-            open(ELEMENT_BASE_URLS[sym] + URI.escape(file.to_s)) do |page| 
+            open(ELEMENT_BASE_URLS[str] + URI.escape(file.to_s)) do |page|
               File.open(downloaded_file, "w"){|f| f.write(page.read)}
             end #open URI
           end #each file
-        end #each symbol
+        end #each string
 
         info("Computing checksums for '#{pkgname}'")
         make_spec(pkgname, spec, tmpdir)
@@ -143,12 +174,32 @@ package_names.each do |pkgname|
         cp pkg.path, PACKAGES_DIRECTORY
         pkg.spec.save(SPECS_DIRECTORY)
       rescue => e
-        error("Skipping package '#{pkgname}', original error was: #{e.message}")
+        skipped << pkgname
+        error("**WARNING** Skipping package '#{pkgname}', original error was: #{e.class}: #{e.message}")
       end
     end #mktmpdir
     
   end #Thread.new
 end #package_names.each
-info("MAIN PROGRAM FINISHED") #DEBUG
+
+#Wait for all the threads to finish
 @threads.map(&:join)
-sleep #DEBUG
+
+#Write the package list
+converted_packages = package_names - skipped
+File.open(REPO_LIST_FILE, "w"){|f| f.write(converted_packages.join("\n"))}
+
+#Print out a summary... Hey, waiting makes curious! ;-)
+puts
+puts "SUMMARY".center(80, "=")
+puts "Packages found in the GitHub repository: #{package_names.count}"
+sleep 2
+puts "Packages converted into .smcpak files: #{converted_packages.count}"
+sleep 2
+puts "Packages skipped due to packaging errors: #{skipped.count}"
+sleep 2
+puts
+print "That is... "
+sleep 3
+percent = ((converted_packages.count.to_f / package_names.count.to_f) * 100).round(2)
+puts "#{percent}% converted correctly! Have fun!"
