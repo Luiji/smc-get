@@ -137,6 +137,29 @@ module SmcGet
       end
       
     end
+
+    #Raised if something goes wrong during compression
+    #or decompression of packages.
+    class CompressionError < SmcGetError
+
+      #The path to the file something was wrong with.
+      #A Pathname object.
+      attr_reader :path
+
+      #Creates a new exception of this type.
+      #==Parameters
+      #[message] The message to display.
+      #[path]    The path to the errorneous file.
+      #==Return value
+      #An instance of this class.
+      #==Example
+      #  raise(CompressionError.new("Boring file", "/dev/null"))
+      def initialize(message, path)
+        super(message)
+        @path = Pathname.new(path) rescue path
+      end
+      
+    end
     
   end
 end
