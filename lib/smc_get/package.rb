@@ -173,37 +173,17 @@ module SmcGet
         spec = PackageSpecification.from_file(spec_file) #Raises if necessary
         
         #3. Validate the rest of the structure
+        %w[levels pixmaps music sounds worlds].each do |str|
+          dir = directory + str
+          raise(Errors::BrokenPackageError, "Directory #{str} missing!") unless dir.directory?
+        end
+
+        #Warnings
         $stderr.puts("Warning: No README.txt found.") unless readme.file?
         $stderr.puts("Warning: No levels found.") if spec.levels.empty?
         
         #4. Compress the whole thing
-        #The process is as follows: A temporary directory is created, in which
-        #a subdirectory that is named after the package is created. The
-        #spec, the README and the levels, music, etc. are then copied into
-        #that subdirectory which in turn is then compressed. The resulting
-        #.smcpak file is copied back to the original directory’s parent dir.
-        #After that, the mktmpdir block ends and deletes the temporary
-        #directory.
-        path = Dir.mktmpdir("smc-get-create-#{pkg_name}") do |tmpdir|
-          goal_dir = Pathname.new(tmpdir) + pkg_name
-          goal_dir.mkdir
-          
-          FileUtils.cp(spec_file, goal_dir)
-          FileUtils.cp(readme, goal_dir) if readme.file? #Optional
-          [:levels, :graphics, :music, :sounds, :worlds].each do |sym|
-            #4.1. Create the group’s subdir
-            dirname = const_get(:"#{sym.upcase}_DIR")
-            goal_group_dir = goal_dir + dirname
-            goal_group_dir.mkdir
-            #4.2. Copy all the group’s files over to it
-            spec[sym].each do |filename|
-              FileUtils.cp_r(directory + dirname + filename, goal_group_dir) #cp_r, b/c worlds are directories
-            end
-          end
-          #4.3. actual compression
-          PackageArchive.compress(goal_dir, smcpak_file).path
-        end
-        #5. Return a new instance of Package
+        path = PackageArchive.compress(directory, smcpak_file).path
         from_file(path)
       end
       

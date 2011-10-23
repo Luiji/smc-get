@@ -210,6 +210,10 @@ module SmcGet
         errors << "Mandatory key #{sym} is missing!" unless @info.has_key?(sym)
       end
       
+      [:levels, :graphics, :music, :sounds, :worlds].each do |sym|
+        errors << "Mandatory checksum key #{sym} is missing!" unless @info[:checksums].has_key?(sym.to_s)
+      end
+
       errors
     end
     
