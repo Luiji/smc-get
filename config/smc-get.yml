@@ -25,7 +25,7 @@
 #/usr/share/smc.
 data_directory: "/usr/share/smc"
 #This is the URL of the repository where packages are downloaded from.
-repo_url: "https://raw.github.com/Luiji/Secret-Maryo-Chronicles-Contributed-Levels/master/packages"
+repo_url: "https://raw.github.com/Quintus/smc-contributed-packages/master"
 #This is the maximum number of tries smc-get makes in order to 
 #download a package. 
 max_tries: 3
