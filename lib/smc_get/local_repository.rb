@@ -219,7 +219,7 @@ module SmcGet
           break if empty_dirs.empty?
           #Otherwise delete the empty directories and redo the process, because
           #the parent directories could be empty now.
-          empty_dirs.each{|path| File.delete(path)}
+          empty_dirs.each{|path| FileUtils.rmdir(path)}
         end
       end
 
