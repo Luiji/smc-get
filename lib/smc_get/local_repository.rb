@@ -101,7 +101,12 @@ module SmcGet
       
       #Create the directories if they’re not there yet
       [@specs_dir, @cache_dir, @levels_dir, @music_dir, @graphics_dir, @sounds_dir, @worlds_dir].each do |dir|
-        dir.mkpath unless dir.directory?
+        begin
+          dir.mkpath unless dir.directory?
+        rescue Errno::EACCES #This is fatal, don’t raise InvalidRepository
+          $stderr.puts("FATAL: Can't create the directory #{dir}, do you have write permissions there? ")
+          exit 2
+        end
       end
       
       @package_specs = []
