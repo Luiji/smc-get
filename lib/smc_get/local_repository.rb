@@ -158,6 +158,10 @@ module SmcGet
     def install(package)
       path = package.decompress(SmcGet.temp_dir) + package.spec.name
       
+      unless package.spec.valid?
+        raise(Errors::InvalidSpecification, package.spec.validate.first)
+      end
+
       package.spec.save(@specs_dir)
       
       FileUtils.cp_r(path.join(Package::LEVELS_DIR).children, @levels_dir)
