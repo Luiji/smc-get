@@ -1,4 +1,4 @@
-#Encoding: UTF-8
+# -*- coding: utf-8 -*-
 ################################################################################
 # This file is part of smc-get.
 # Copyright (C) 2010-2011 Entertaining Software, Inc.
@@ -69,99 +69,25 @@ either / on *nix or <letter>:\\ on Windows) are searched for in your
 home directory's .smc directory and your SMC installation.
             MSG
             #All the information will be collected in this hash
-            spec = Hash.new{|hsh, key| hsh[key] = []}
+            spec = {}
             
             #Start the questionaire
             [:levels, :graphics, :music, :sounds, :worlds].each do |sym|
-              spec[sym].concat(input_files(sym))
+              spec[sym] = input_files(sym)
             end
 
-            puts
-            puts("Who participated in creating this package?")
-            loop do
-              print "> "
-              str = $stdin.gets.chomp
-              
-              if str.empty?
-                if spec[:authors].empty?
-                  $stderr.puts("You have to input at least one author.")
-                else
-                  break
-                end
-              else #Something was entered
-                spec[:authors].concat(str.split(",").map(&:strip))
-              end
-            end
-
-            puts
-            puts "Enter this package's dependecy packages:"
-            loop do
-              print "> "
-              str = $stdin.gets.chomp
-              if str.empty?
-                break
-              else
-                spec[:dependencies].concat(str.split(",").map(&:strip))
-              end
-            end
-            
-            loop do
-              puts
-              print("Enter the difficulty: ")
-              break unless (spec[:difficulty] = $stdin.gets.chomp).empty?
-            end
-            
-            puts
-            puts("Enter the package's description. A single line containing containg")
-            puts("END")
-            puts("terminates the query.")
-            spec[:description] = ""
-            loop do
-              print "> "
-              str = $stdin.gets #No chomp here, the user may set spaces at the line end intentionally
-              if str == "END\n"
-                if spec[:description].strip.empty?
-                  $stderr.puts("You *have* to input a description!")
-                  $stderr.puts("And it must consist of something else than only whitespace!")
-                else
-                  break
-                end
-              else
-                spec[:description] << str
-              end
-            end
-            
-            [:install_message, :remove_message].each{|sym| spec[sym] = input_desc(sym)}
-            
-            loop do
-              puts
-              print("Enter the package's full title (it can contain whitespace):")
-              spec[:title] = $stdin.gets.chomp
-              if spec[:title].strip.empty?
-                $stderr.puts "You *have* to specify a title that doesn't consist solely of whitespace!"
-              else
-                break
-              end
-            end
-            
-            pkgname = nil
-            loop do
-              puts
-              print "Enter the package's name (this mustn't contain whitespace):"
-              pkgname = $stdin.gets.chomp
-              if pkgname.strip.empty?
-                $stderr.puts "You *have* to specify a name!"
-              elsif pkgname =~ /\s/
-                $stderr.puts "The package name mustn't contain whitespace!"
-              else
-                break
-              end
-            end
+            spec[:authors]         = ask_list   "Who participated in creating this package?"
+            spec[:dependencies]    = ask_list   "Enter this package's dependecy packages.", true
+            spec[:difficulty]      = ask_string "Enter the difficulty: "
+            spec[:description]     = ask_text   "Enter the package's description."
+            spec[:install_message] = ask_text   "Enter the installation message.", true
+            spec[:remove_message]  = ask_text   "Enter the remove message.", true
+            spec[:title]           = ask_string "Enter the package's full title (it can contain whitespace):"
+            pkgname                = ask_string "Enter the package's name (this mustn't contain whitespace):"
 
             #Set the last_update spec field to now
-            spec[:last_update] = Time.now.utc
+            spec[:last_update] = Time.now.utc #autoconvert to UTC
 
-            puts
             #This is all. Start building the package.
             Dir.mktmpdir("smc-get-build-package") do |tmpdir|
               puts "Creating package..."
@@ -274,28 +200,6 @@ home directory's .smc directory and your SMC installation.
         result
       end
       
-      #Queries the user for a longer, but optional text that is returned. If
-      #the user enters no text beside the END marker, returns nil. Pass in
-      #what to tell the user is to be entered.
-      def input_desc(sym)
-        puts
-        puts("Enter the package's #{sym}. A single line containing containg")
-        puts("END")
-        puts("terminates the query. Enter END immediately if you don't want")
-        puts "a #{sym}."
-        result = ""
-        loop do
-          print "> "
-          str = $stdin.gets #No chomp here, the user may set spaces at the line end intentionally
-          if str == "END\n"
-            break
-          else
-            result << str
-          end
-        end
-        result.empty? ? nil : result
-      end
-      
       def get_file_paths(plural_name, path)
         #Even on Windows we work with forward slash (Windows supports this,
         #although it’s not well known)
@@ -325,6 +229,66 @@ home directory's .smc directory and your SMC installation.
         ary
       end
       
+      #Asks for a newline and/or comma-separated list of things which are
+      #returned as an array.
+      def ask_list(message, blank_allowed = false)
+        puts(message)
+        list = []
+        loop do
+          print "> "
+          str = $stdin.gets.chomp
+          
+          if str.empty?
+            if list.empty? and !blank_allowed
+              $stderr.puts("You have to input at least one entry.")
+            else
+              break
+            end
+          else #Something was entered
+            list.concat(str.split(",").map(&:strip))
+          end
+        end
+        puts #Blank line
+        list
+      end
+
+      #Ask for a short string. If +no_whitespace+ is true, the user is
+      #prompted again and again until he finally enters something without
+      #whitespace. The string is returned.
+      def ask_string(message, no_whitespace = false)
+        loop do
+          print(message)
+          str = $stdin.gets.chomp
+          if no_whitespace and str =~ /\s/
+            $stderr.puts("No whitespace allowed.")
+          else
+            puts #Blank line
+            return str
+          end
+        end
+      end
+
+      #Ask for a longer text that will be returned. If +blank_allowed+ is true,
+      #an empty text causes a return value of +nil+.
+      def ask_text(message, blank_allowed = false)
+        puts(message)
+        puts "End input with the word END on a single line."
+        text = ""
+        loop do
+          str = $stdin.gets
+          if str == "END\n"
+            if text.empty? and !blank_allowed
+              $stderr.puts("Nothing entered. Please input some text.")
+            else
+              puts #Blank line
+              return text.empty? ? nil : text.strip
+            end #if empty?
+          else
+            text << str
+          end #if END
+        end #loop
+      end #ask_text
+
     end
     
   end
