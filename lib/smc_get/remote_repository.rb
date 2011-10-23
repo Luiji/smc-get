@@ -64,7 +64,7 @@ module SmcGet
       @uri = URI.parse(uri)
       #Download the packages list. Usually it’s small enough to fit into RAM.
       begin
-        @packages_list = open(@uri + LIST_FILE){|tmpfile| tmpfile.read}.split
+        @packages_list = open("#{@uri}/#{LIST_FILE}"){|tmpfile| tmpfile.read}.split
       rescue SocketError, Errno::ECONNREFUSED, OpenURI::HTTPError => e #open-uri raises HTTPError even in case of other protocols
         raise(Errors::InvalidRepository.new(@uri), e.message)
       end
@@ -112,7 +112,7 @@ module SmcGet
       #expected:
       #  uri + "test/test2"
       #The second one is the workaround I use in the following line.
-      open(@uri.merge("#{SPECS_DIR}/#{spec_file}")) do |tempfile|
+      open("#{@uri}/#{SPECS_DIR}/#{spec_file}") do |tempfile|
         File.open(goal_file, "w") do |file|
           file.write(tempfile.read) #Specs almost ever are small enough to fit in RAM
         end
@@ -165,7 +165,7 @@ module SmcGet
       
       #See the source of #fetch_spec for an explanation on the obscure
       #URI concatenation.
-      open(@uri + "#{PACKAGES_DIR}/#{pkg_file}", "rb", content_length_proc: size_proc, progress_proc: prog_proc) do |tempfile|
+      open("#{@uri}/#{PACKAGES_DIR}/#{pkg_file}", "rb", content_length_proc: size_proc, progress_proc: prog_proc) do |tempfile|
         #The packages may be too big for fitting into RAM, therefore we’re going
         #to read and write the packages chunk by chunk. Btw. please notice me
         #if you find a SMC package that’s larger than 4 GiB! I’d be curious
