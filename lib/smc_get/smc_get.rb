@@ -23,6 +23,7 @@ require 'tempfile'
 require "fileutils"
 require "tempfile"
 require "digest/sha1"
+require "webrick"
 begin
   require "psych"
 rescue LoadError
