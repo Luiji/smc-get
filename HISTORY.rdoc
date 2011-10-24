@@ -8,8 +8,16 @@ If a change is related to a ticket
 {on our issue tracker}[https://github.com/Luiji/smc-get/issues],
 the corresponding ticket is given in square brackets [ and ].
 
-== Next release
+== 0.3.0-beta1
 
+* Lots of smaller fixes and internal code improvements
+* We have a working default repository now!
+* Check specs for validness before they're installed
+* <i>Fixed a problem with <tt>smc-get uninstall</tt> not removing
+  directories.</i>
+* <b>Added the <tt>server</tt> command to <tt>smc-get</tt>.
+* Experimental script for converting Luiji's GitHub repo to the new
+  SMCPAK format.
 * <b>Added --local option to <tt>smc-get install</tt> for installing local
   package files.</b>
 
